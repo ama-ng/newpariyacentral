@@ -3954,7 +3954,7 @@ const CLASS_LINKS = {
   "Primary 5A": { first: "https://docs.google.com/spreadsheets/d/e/2PACX-1vS5_XxUPkInHp38b0PKlFbce32nNWBcCLe9OpWIXlc7B596WrNxbr6-0xkvESvIZXg5Z1zBRfmz-yWC/pub?gid=430811317&single=true&output=csv", second: "https://docs.google.com/spreadsheets/d/e/2PACX-1vS5_XxUPkInHp38b0PKlFbce32nNWBcCLe9OpWIXlc7B596WrNxbr6-0xkvESvIZXg5Z1zBRfmz-yWC/pub?gid=1930627604&single=true&output=csv", third: "https://docs.google.com/spreadsheets/d/e/2PACX-1vS5_XxUPkInHp38b0PKlFbce32nNWBcCLe9OpWIXlc7B596WrNxbr6-0xkvESvIZXg5Z1zBRfmz-yWC/pub?gid=0&single=true&output=csv" },
   "Primary 5B": { first: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRNoSKvdtktchThzia3i4WmU-25JeUyJ1aQ5388pFf0QgTLGeyZ0XiUd9J3oVo8E_wjmtjuBaEo7nv9/pub?gid=1002939567&single=true&output=csv", second: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRNoSKvdtktchThzia3i4WmU-25JeUyJ1aQ5388pFf0QgTLGeyZ0XiUd9J3oVo8E_wjmtjuBaEo7nv9/pub?gid=1740938390&single=true&output=csv", third: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRNoSKvdtktchThzia3i4WmU-25JeUyJ1aQ5388pFf0QgTLGeyZ0XiUd9J3oVo8E_wjmtjuBaEo7nv9/pub?gid=1979559050&single=true&output=csv" },
 
-  "Primary 6A": { first: "", second: "", third: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ_MTOXs0gNNiwJYe4sLJe7jrJH92NGt-NSJh-B2PT81Xh6xdrubbJrLhaJZKBli_zFaalPnmZTmhka/pub?gid=0&single=true&output=csv" },
+  "Primary 6A": { first: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ_MTOXs0gNNiwJYe4sLJe7jrJH92NGt-NSJh-B2PT81Xh6xdrubbJrLhaJZKBli_zFaalPnmZTmhka/pub?gid=1723045885&single=true&output=csv", second: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ_MTOXs0gNNiwJYe4sLJe7jrJH92NGt-NSJh-B2PT81Xh6xdrubbJrLhaJZKBli_zFaalPnmZTmhka/pub?gid=252457421&single=true&output=csv", third: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ_MTOXs0gNNiwJYe4sLJe7jrJH92NGt-NSJh-B2PT81Xh6xdrubbJrLhaJZKBli_zFaalPnmZTmhka/pub?gid=0&single=true&output=csv" },
   "Primary 6B": { first: "", second: "", third: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQujOeStPoe78kBunsnNqEIGTnAv_4ncMSGE_CQWVyvMOxRmMCNWDERtcKXr4rnD8K0WtC1SI2w8gN2/pub?gid=835036433&single=true&output=csv" },
 };
 
@@ -4044,6 +4044,35 @@ let currentTerm    = 'First Term'; // Selected term for class detail page
 let detailStudents = [];        // Raw student list for class detail page
 let studentLoginData = null;    // Stores data for logged-in student
 let analyticsCache = {};        // Cache for analytics data per class
+let currentStudentTerm = null;  // Last term opened by the logged-in student (for auto-refresh + session restore)
+let teacherActiveTerm  = null;  // Last term opened inside the teacher dashboard (for auto-refresh)
+
+/* ============================================================
+   PERSISTENT LOGIN SESSION
+   Purpose: Keep the user signed in across page refreshes until
+   they explicitly log out. Only the identity needed to re-verify
+   is stored (never the password) — on load we re-check against
+   the live Google Sheet before restoring any dashboard.
+   ============================================================ */
+const PA_SESSION_KEY = 'pa_active_session';
+
+function pa_saveSession(data) {
+  try { localStorage.setItem(PA_SESSION_KEY, JSON.stringify(data)); } catch (e) {}
+}
+function pa_updateSession(patch) {
+  const s = pa_loadSession();
+  if (!s) return;
+  pa_saveSession(Object.assign({}, s, patch));
+}
+function pa_loadSession() {
+  try {
+    const raw = localStorage.getItem(PA_SESSION_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+}
+function pa_clearSession() {
+  try { localStorage.removeItem(PA_SESSION_KEY); } catch (e) {}
+}
 
 /* Shorthand for document.getElementById */
 const $ = id => document.getElementById(id);
@@ -4154,6 +4183,7 @@ function studentLogin() {
       // START CUSTOM EDIT SECTION — Store student data, show term selection
       // Store entire class data (for term-based fetching) and student info
       studentLoginData = { allStudents: all, admissionNo: admission, className: cls };
+      pa_saveSession({ role: 'student', className: cls, admissionNo: admission, lastTerm: null });
 
       // Set up welcome screen
       $('studentWelcomeName').textContent = `Welcome, ${stu['Name']}!`;
@@ -4227,6 +4257,9 @@ function studentLoadTerm(term) {
     showToast('❌ Please log in again.', 'error');
     return;
   }
+
+  currentStudentTerm = term;
+  pa_updateSession({ lastTerm: term });
 
   const loader = $('student-card-loading');
   const area   = $('studentReportArea');
@@ -4439,8 +4472,10 @@ function studentDownloadCard() {
    Purpose: Clear all session data and return to portal
    ============================================================ */
 function logout() {
+  pa_clearSession();
   students       = [];
   studentLoginData = null;
+  currentStudentTerm = null;
   $('reportArea').innerHTML = '';
   $('reportWrapper').style.display = 'none';
   $('studentReportArea').innerHTML = '';
@@ -4728,7 +4763,9 @@ function generateFromDetail() {
    Purpose: Download a CSV file from a URL
    ============================================================ */
 async function fetchCSV(url) {
-  const res = await fetch(url, { mode: 'cors' });
+  // Cache-bust so refreshes and auto-refresh always get the latest sheet data
+  const bustedUrl = url + (url.includes('?') ? '&' : '?') + '_cb=' + Date.now();
+  const res = await fetch(bustedUrl, { mode: 'cors', cache: 'no-store' });
   if (!res.ok) throw new Error('Non-OK response');
   return res.text();
 }
@@ -8073,10 +8110,12 @@ async function staffLogin() {
     const isAdmin = (match.Rank || '').trim().toLowerCase() === 'admin';
 
     if (isAdmin) {
+      pa_saveSession({ role: 'admin', staffId: match.TeacherID });
       initAdminDashboard();
       showScreen('screen-admin-dash');
       showToast(`✅ Welcome, ${match.Name}!`);
     } else {
+      pa_saveSession({ role: 'teacher', staffId: match.TeacherID });
       currentTeacherLogin = match;
       renderTeacherDashboard();
       showScreen('screen-teacher-dash');
@@ -8094,10 +8133,12 @@ async function staffLogin() {
 const teacherLogin = staffLogin;
 
 function teacherLogout() {
+  pa_clearSession();
   currentTeacherLogin  = null;
   teacherMyClasses     = [];
   teacherActiveClass   = null;
   teacherActiveSubject = '';
+  teacherActiveTerm    = null;
   const idInput = $('teacher-id-input');
   const pwInput = $('teacher-password-input');
   if (idInput) idInput.value = '';
@@ -8272,6 +8313,7 @@ function teacherBackToSubjects() {
     student's Name + this subject's CA1 / CA2 / Exams / Total. */
 async function teacherLoadSubjectScores(term, btnEl) {
   if (!teacherActiveClass || !teacherActiveSubject) return;
+  teacherActiveTerm = term;
   document.querySelectorAll('#teacherTermWrap .btn-term-admin').forEach(b => b.classList.remove('selected'));
   if (btnEl) btnEl.classList.add('selected');
 
@@ -8584,6 +8626,7 @@ function smartLogin() {
 
     // ── Identity confirmed; term PIN is required when student picks a term ──
     studentLoginData = { allStudents: all, admissionNo: username, className: classVal };
+    pa_saveSession({ role: 'student', className: classVal, admissionNo: username, lastTerm: null });
     document.getElementById('studentWelcomeName').textContent = `Welcome, ${stu['Name']}!`;
     document.getElementById('studentWelcomeSub').textContent  = `${classVal} — Select a term to view your result`;
     updateStudentSidebar(stu['Name'], classVal);
@@ -8682,10 +8725,105 @@ function resetAllLocalData() {
 window.resetAllLocalData = resetAllLocalData;
 
 /* ============================================================
+   SESSION RESTORE — keep the user signed in across refreshes
+   Purpose: On page load, if a saved session exists, silently
+   re-verify the identity against the live Google Sheet and drop
+   the user straight back into their dashboard instead of the
+   login screen. Nothing is trusted blindly — if the sheet no
+   longer has this student/staff record, the session is cleared
+   and the person sees the normal login screen.
+   ============================================================ */
+async function pa_restoreSession() {
+  const session = pa_loadSession();
+  if (!session || !session.role) return;
+
+  try {
+    if (session.role === 'student') {
+      const url = getTermUrl(session.className, 'First Term');
+      if (!url) { pa_clearSession(); return; }
+      const csv = await fetchCSV(url);
+      const all = parseCSV(csv);
+      const stu = all.find(s =>
+        (s['Admission No'] || '').trim().toLowerCase() === (session.admissionNo || '').toLowerCase()
+      );
+      if (!stu) { pa_clearSession(); return; }
+
+      studentLoginData = { allStudents: all, admissionNo: session.admissionNo, className: session.className };
+      $('studentWelcomeName').textContent = `Welcome, ${stu['Name']}!`;
+      $('studentWelcomeSub').textContent  = `${session.className} — Select a term to view your result`;
+      updateStudentSidebar(stu['Name'], session.className);
+      showScreen('screen-student-dash');
+
+      if (session.lastTerm) {
+        studentLoadTerm(session.lastTerm);
+      } else {
+        $('student-term-select').style.display = 'block';
+        $('student-report-panel').style.display = 'none';
+      }
+    } else if (session.role === 'admin' || session.role === 'teacher') {
+      await loadTeacherDirectory(true);
+      const match = teacherDirectoryReady.find(t =>
+        t.TeacherID.trim().toLowerCase() === (session.staffId || '').toLowerCase()
+      );
+      if (!match) { pa_clearSession(); return; }
+
+      const isAdmin = (match.Rank || '').trim().toLowerCase() === 'admin';
+      if (session.role === 'admin' && isAdmin) {
+        initAdminDashboard();
+        showScreen('screen-admin-dash');
+      } else if (session.role === 'teacher' && !isAdmin) {
+        currentTeacherLogin = match;
+        renderTeacherDashboard();
+        showScreen('screen-teacher-dash');
+      } else {
+        // Rank changed on the sheet since last login — clear stale session
+        pa_clearSession();
+      }
+    }
+  } catch (e) {
+    console.error('Session restore failed', e);
+    // Leave the saved session in place in case this was just a network hiccup;
+    // the user will simply see the login screen and can sign in again.
+  }
+}
+
+/* ============================================================
+   AUTO-REFRESH — silently re-pull CSV data for whatever screen
+   is currently open, without needing a manual page refresh.
+   ============================================================ */
+function pa_autoRefreshTick() {
+  const activeScreen = document.querySelector('.screen.active');
+  if (!activeScreen) return;
+  const id = activeScreen.id;
+
+  try {
+    if (id === 'screen-student-dash' && studentLoginData && currentStudentTerm &&
+        $('student-report-panel') && $('student-report-panel').style.display !== 'none') {
+      studentLoadTerm(currentStudentTerm);
+    } else if (id === 'screen-class-detail' && currentClass) {
+      loadDetailForTerm(currentClass, currentTerm);
+    } else if (id === 'screen-teacher-dash' && teacherActiveClass && teacherActiveSubject && teacherActiveTerm &&
+               $('teacherTermWrap') && $('teacherTermWrap').style.display !== 'none') {
+      teacherLoadSubjectScores(teacherActiveTerm, null);
+    }
+  } catch (e) {
+    console.error('Auto-refresh tick failed', e);
+  }
+}
+
+let __paAutoRefreshTimer = null;
+function pa_startAutoRefresh() {
+  if (__paAutoRefreshTimer) return;
+  __paAutoRefreshTimer = setInterval(pa_autoRefreshTick, 60000); // every 60 seconds
+}
+
+/* ============================================================
    INIT — Theme, remember-me, populate classes on load
    ============================================================ */
 window.addEventListener('load', () => {
   initializeTheme();
+  pa_restoreSession();
+  pa_startAutoRefresh();
 
   // Populate smart login class dropdown
   const smartSel = document.getElementById('smart-class');
@@ -8984,7 +9122,7 @@ function buildTestimonialCertHTML(opts) {
           ${generateSealSVG()}
         </div>
         <div class="cert-testi-sig-block">
-          <img class="cert-testi-sig-img" src="${headteacherSig}" alt="Head Teacher Sig" onerror="this.style.display='none'">
+          <img class="cert-testi-sig-img" src="" alt="" style="display:none;">
           <div class="cert-testi-sig-line"></div>
           <div class="cert-testi-sig-title">HEADTEACHERS SIGN</div>
         </div>
