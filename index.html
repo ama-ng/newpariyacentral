@@ -1979,9 +1979,11 @@ canvas.pa-chart {
   font-family: 'Manrope', sans-serif;
 }
 .cert-testi-header-row {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  margin-bottom: 4px; position: relative; z-index: 1; width: 100%;
+  display: flex; flex-direction: row; align-items: center; justify-content: center;
+  gap: 12px; margin-bottom: 4px; position: relative; z-index: 1; width: 100%;
 }
+.cert-testi-coa { width: 52px; height: 52px; object-fit: contain; flex-shrink: 0; }
+.cert-testi-header-text { flex: 1; display: flex; flex-direction: column; align-items: center; }
 .cert-testi-school-name { font-size: 25px; font-weight: 900; color: #142e6e; text-align: center; letter-spacing: .4px; line-height: 1.2; text-transform: uppercase; }
 .cert-testi-school-sub  { font-size: 12.5px; color: #161616; text-align: center; font-weight: 800; margin-top: 3px; text-transform: uppercase; letter-spacing: .3px; }
 .cert-testi-title {
@@ -9094,8 +9096,11 @@ function buildTestimonialCertHTML(opts) {
         <div class="txt">PASSPORT</div>
       </div>
       <div class="cert-testi-header-row">
-        <div class="cert-testi-school-name">${escapeHtml(schoolName)}</div>
-        ${schoolAddress ? `<div class="cert-testi-school-sub">${escapeHtml(schoolAddress)}</div>` : ''}
+        <img class="cert-testi-coa" src="${RC_COAT_OF_ARMS_URL}" alt="Coat of Arms" onerror="this.style.display='none'">
+        <div class="cert-testi-header-text">
+          <div class="cert-testi-school-name">${escapeHtml(schoolName)}</div>
+          ${schoolAddress ? `<div class="cert-testi-school-sub">${escapeHtml(schoolAddress)}</div>` : ''}
+        </div>
       </div>
       <div class="cert-testi-title">Testimonial</div>
       <div class="cert-testi-title-underline"></div>
