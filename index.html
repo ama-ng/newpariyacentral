@@ -6,8 +6,19 @@
 <title>Pariya Central Primary — Report Card System</title>
 
 <!-- ============================================================
-     PARIYA CENTRAL PRIMARY REPORT CARD SYSTEM  — Version 3.3
-     Changes in v3.3 (this version):
+     PARIYA CENTRAL PRIMARY REPORT CARD SYSTEM  — Version 3.4
+     Changes in v3.4 (this version):
+       • Removed the entire admin "School Fees" section (sidebar item,
+         tab, fee summary/collection tables, PDF exports, fee-override
+         tools) and its dedicated Admin PIN modal
+       • Removed the fee-payment block that prevented students from
+         viewing their report card — results now load with no
+         payment-status gate
+       • Student Term PIN lock is UNCHANGED — each term still requires
+         its 4-digit PIN before the result loads
+       • Term PINs changed: First Term = 2024, Second Term = 2025,
+         Third Term = 2026 (edit the TERM_PINS object to change again)
+     Changes in v3.3:
        • Term Summary box now shows on First & Second Term too, not just Third
        • First Term:  only 1st Avg shown; Ann. Avg/Grade/Position blank ("—")
        • Second Term: 1st + 2nd Avg shown; Ann. Avg/Grade/Position blank ("—")
@@ -311,15 +322,6 @@
 }
 .pay-checkbox-wrap input[type="checkbox"]:checked + label { color: var(--dash-accent); }
 
-/* ── Admin mark-paid buttons in fees table ── */
-.btn-mark-paid {
-  padding: 4px 10px; border-radius: 999px; font-size: 10px; font-weight: 800;
-  cursor: pointer; transition: var(--transition); border: none;
-  background: var(--dash-green-soft); color: var(--dash-accent);
-}
-.btn-mark-paid:hover { background: var(--dash-green); color: #fff; }
-.btn-mark-paid.marked { background: rgba(179,64,31,0.15); color: #B3401F; }
-.btn-mark-paid.marked:hover { background: rgba(179,64,31,0.3); }
 
 /* ── Toast improvements ── */
 .toast {
@@ -995,17 +997,6 @@ body {
 .sd-attend-lbl { font-size: 12px; color: var(--sd-ink3); }
 .sd-attend-val { font-size: 13px; font-weight: 600; color: var(--sd-ink); }
 
-/* Fees */
-.sd-fee-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--sd-ivory2); }
-.sd-fee-row:last-child { border-bottom: none; }
-.sd-fee-lbl { font-size: 13px; color: var(--sd-ink2); font-weight: 500; }
-.sd-fee-sub { font-size: 11px; color: var(--sd-ink3); margin-top: 1px; }
-.sd-fee-amt { font-size: 13px; font-weight: 600; color: var(--sd-ink); }
-.sd-fee-bar { margin-top: 14px; }
-.sd-fee-bar-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--sd-ink3); margin-bottom: 5px; }
-.sd-fee-bar-track { height: 7px; border-radius: 999px; background: var(--sd-ivory2); overflow: hidden; }
-.sd-fee-bar-fill { height: 100%; border-radius: 999px; background: var(--sd-emerald); }
-
 /* Color utils */
 .sd-c-indigo { background: var(--sd-indigo-lt); color: var(--sd-indigo); }
 .sd-c-gold   { background: var(--sd-gold-lt);   color: var(--sd-gold); }
@@ -1076,12 +1067,26 @@ body {
   body > #printContainer { display:block !important; }
   body > #tt-print-mount  { display:block !important; }
 
-  /* Testimonial certificates printed via Print All — one per page */
+  /* Testimonial certificates printed via Print All — one per page,
+     scaled up to fill the printed A4 page instead of appearing small
+     in the middle of the sheet. The certificate's fixed pixel design
+     (640 x 906px) is close to the A4 ratio, so it is uniformly scaled
+     with a transform (keeping every border/font/position proportional)
+     rather than resized, which would break the fixed-px layout. */
   #printContainer .cert-print-page {
     display:flex !important; justify-content:center; align-items:flex-start;
     page-break-after:always !important; margin:0 !important;
+    overflow:visible !important; width:100% !important;
   }
   #printContainer .cert-print-page:last-child { page-break-after:avoid !important; }
+  #printContainer .cert-print-page .cert-portrait-wrapper,
+  #printContainer .cert-print-page.cert-portrait-wrapper {
+    width:auto !important; max-width:none !important; margin:0 !important;
+  }
+  #printContainer .cert-print-page .cert-testimonial {
+    transform:scale(1.19);
+    transform-origin: top center;
+  }
 
   .card {
     margin:0 !important; padding:6mm !important;
@@ -1530,92 +1535,10 @@ body {
 /* END CUSTOM EDIT SECTION — Admin Dashboard Extra Panels */
 
 /* ============================================================
-   START CUSTOM EDIT SECTION — Teachers & School Fees Styles
+   START CUSTOM EDIT SECTION — Teachers Styles
    ============================================================ */
 
-/* PIN Modal */
-.pin-modal-overlay {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.75);
-  z-index: 9999;
-  display: flex; align-items: center; justify-content: center;
-  animation: fadeIn 0.2s ease;
-}
-.pin-modal-overlay.hidden { display: none; }
-
-.pin-modal {
-  background: var(--dash-surface);
-  border: 1px solid var(--dash-border);
-  border-radius: var(--radius);
-  padding: 28px 24px 24px;
-  width: 100%; max-width: 360px;
-  box-shadow: 0 8px 40px rgba(0,0,0,0.5);
-  position: relative;
-}
-.pin-modal::before {
-  content:''; position:absolute; top:0; left:0; right:0;
-  height:3px;
-  background: linear-gradient(90deg, var(--dash-green), var(--dash-accent));
-  border-radius: var(--radius) var(--radius) 0 0;
-}
-.pin-modal h3 {
-  font-size:16px; font-weight:900; color:var(--dash-text);
-  text-align:center; margin-bottom:6px;
-}
-.pin-modal p {
-  font-size:12px; color:var(--dash-muted); font-weight:600;
-  text-align:center; margin-bottom:18px;
-}
-.pin-dots {
-  display: flex; justify-content: center; gap: 10px; margin-bottom: 20px;
-}
-.pin-dot {
-  width: 14px; height: 14px; border-radius: 50%;
-  background: var(--dash-border);
-  transition: var(--transition);
-}
-.pin-dot.filled { background: var(--dash-accent); box-shadow: 0 0 8px var(--dash-green-glow); }
-
-.pin-keypad {
-  display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 12px;
-}
-.pin-key {
-  padding: 14px 0; background: var(--dash-card);
-  border: 1px solid var(--dash-border); border-radius: var(--radius-sm);
-  color: var(--dash-text); font-size: 18px; font-weight: 900;
-  cursor: pointer; transition: var(--transition); text-align: center;
-  font-family: var(--font-ui);
-}
-.pin-key:hover { background: var(--dash-green-soft); border-color: var(--dash-green); color: var(--dash-accent); }
-.pin-key.pin-del { font-size: 14px; color: var(--dash-muted); }
-.pin-key.pin-del:hover { color: var(--dash-danger); border-color: var(--dash-danger); }
-
-.pin-error {
-  background: rgba(179,64,31,0.12); border: 1px solid rgba(179,64,31,0.3);
-  border-radius: var(--radius-sm); color: #E8B4A0;
-  font-size: 13px; font-weight: 700; padding: 8px 12px;
-  text-align: center; display: none; margin-bottom: 10px;
-}
-.pin-error.show { display: block; animation: shakeX 0.4s ease; }
-
-@keyframes shakeX {
-  0%,100%{transform:translateX(0)}
-  20%{transform:translateX(-8px)}
-  40%{transform:translateX(8px)}
-  60%{transform:translateX(-6px)}
-  80%{transform:translateX(6px)}
-}
-
-.btn-pin-cancel {
-  width:100%; padding:10px;
-  background:transparent; border:1px solid var(--dash-border);
-  border-radius:var(--radius-sm); color:var(--dash-muted);
-  font-family:var(--font-ui); font-size:13px; font-weight:700;
-  cursor:pointer; transition:var(--transition);
-}
-.btn-pin-cancel:hover { color:var(--dash-danger); border-color:var(--dash-danger); }
-
-/* Section cards for Teachers / Fees sections */
+/* Section cards for Teachers section */
 .section-cards-grid {
   display: grid; grid-template-columns: repeat(2,1fr); gap: 12px; margin-bottom: 24px;
 }
@@ -1704,121 +1627,11 @@ body {
 .pay-badge.paid    { background: rgba(91,123,79,0.18); color: #7FA06B; }
 .pay-badge.unpaid  { background: rgba(179,64,31,0.15); color: #E8B4A0; }
 
-/* Fees summary table */
-.fees-summary-table {
-  width:100%; border-collapse:collapse; margin-bottom:16px;
-}
-.fees-summary-table th {
-  background:var(--dash-bg); color:var(--dash-muted);
-  font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:0.06em;
-  padding:8px 10px; border:1px solid var(--dash-border); text-align:left;
-}
-.fees-summary-table td {
-  border:1px solid var(--dash-border); padding:10px;
-  color:var(--dash-text); font-size:13px; font-weight:700;
-  background:var(--dash-surface);
-}
-.fees-summary-table tfoot td {
-  background: var(--dash-green-soft); color: var(--dash-accent);
-  font-size: 14px; font-weight: 900;
-}
-.fees-grand-total {
-  background: linear-gradient(135deg, var(--dash-green-soft), rgba(232,199,126,0.08));
-  border: 1px solid rgba(201,151,63,0.3);
-  border-radius: var(--radius); padding: 14px 16px; margin-bottom: 20px;
-  display: flex; justify-content: space-between; align-items: center;
-}
-.fees-grand-label { font-size: 13px; font-weight: 900; color: var(--dash-muted); text-transform: uppercase; letter-spacing: 0.06em; }
-.fees-grand-value { font-size: 22px; font-weight: 900; color: var(--dash-accent); }
-
-/* Student fees table */
-.fees-student-table {
-  width:100%; border-collapse:collapse;
-}
-.fees-student-table th {
-  background:var(--dash-bg); color:var(--dash-muted);
-  font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:0.06em;
-  padding:8px 10px; border:1px solid var(--dash-border); text-align:left;
-}
-.fees-student-table td {
-  border:1px solid var(--dash-border); padding:9px 10px;
-  color:var(--dash-text); font-size:12px; font-weight:700;
-  background:var(--dash-surface);
-}
-.fees-student-table tbody tr:hover td { background: var(--dash-green-soft); }
-.fees-stats-row {
-  display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px;
-}
-.fees-stat-card {
-  background:var(--dash-card); border:1px solid var(--dash-border);
-  border-radius:var(--radius-sm); padding:12px;
-}
-.fees-stat-label { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:0.06em; color:var(--dash-muted); }
-.fees-stat-value { font-size:18px; font-weight:900; color:var(--dash-accent); margin:3px 0; }
-.fees-stat-sub   { font-size:10px; color:var(--dash-muted); font-weight:600; }
-
-/* Blocked fees screen */
-.fees-blocked-card {
-  max-width: 420px; width:100%;
-  background: var(--dash-surface);
-  border: 1px solid rgba(179,64,31,0.4);
-  border-radius: var(--radius); padding: 28px 24px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-  text-align: center;
-}
-.fees-blocked-card::before {
-  content:''; display:block;
-  font-size:48px; margin-bottom:12px;
-}
-.fees-blocked-icon { font-size:48px; margin-bottom:12px; }
-.fees-blocked-title { font-size:18px; font-weight:900; color:#B3401F; margin-bottom:8px; }
-.fees-blocked-msg { font-size:13px; color:var(--dash-muted); font-weight:700; line-height:1.6; margin-bottom:18px; }
-.fees-blocked-table {
-  width:100%; border-collapse:collapse; margin-bottom:16px; text-align:left;
-}
-.fees-blocked-table td {
-  padding:8px 10px; border:1px solid var(--dash-border);
-  font-size:12px; font-weight:700;
-}
-.fees-blocked-table td:first-child { color:var(--dash-muted); background:var(--dash-bg); }
-.fees-blocked-table td:last-child  { color:var(--dash-text); }
-.fees-blocked-contact {
-  font-size:12px; color:var(--dash-muted); font-weight:700;
-  background:var(--dash-card); border-radius:var(--radius-sm); padding:10px 14px;
-}
-
-/* Back button for sub-panels */
-.btn-section-back {
-  display:inline-flex; align-items:center; gap:6px;
-  padding:8px 14px; background:transparent; border:1px solid var(--dash-border);
-  border-radius:var(--radius-sm); color:var(--dash-muted);
-  font-family:var(--font-ui); font-size:13px; font-weight:800;
-  cursor:pointer; transition:var(--transition); margin-bottom:16px;
-}
-.btn-section-back:hover { border-color:var(--dash-green); color:var(--dash-accent); }
-
-/* Term selector buttons for fees class view */
-.term-selector-row {
-  display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;
-}
-.btn-term-select {
-  flex:1; min-width:100px; padding:10px;
-  background:var(--dash-card); border:1px solid var(--dash-border);
-  border-radius:var(--radius-sm); color:var(--dash-muted);
-  font-family:var(--font-ui); font-size:12px; font-weight:800;
-  cursor:pointer; transition:var(--transition); text-align:center;
-}
-.btn-term-select:hover, .btn-term-select.active {
-  background:var(--dash-green-soft); border-color:var(--dash-green); color:var(--dash-accent);
-}
 
 @media (max-width: 480px) {
   .section-cards-grid { grid-template-columns: 1fr; }
-  .fees-stats-row { grid-template-columns: repeat(2,1fr); }
-  .salary-table, .fees-summary-table, .fees-student-table { font-size: 11px; }
-  .salary-table th, .salary-table td,
-  .fees-summary-table th, .fees-summary-table td,
-  .fees-student-table th, .fees-student-table td { padding: 6px 7px; }
+  .salary-table { font-size: 11px; }
+  .salary-table th, .salary-table td { padding: 6px 7px; }
 }
 /* Master teacher table checkboxes */
 .tch-month-check {
@@ -1827,7 +1640,7 @@ body {
 .tch-check-cell { text-align: center; }
 .tch-check-cell.paid { background: rgba(91,123,79,0.14); }
 .tch-check-cell.unpaid { background: transparent; }
-/* END CUSTOM EDIT SECTION — Teachers & School Fees Styles */
+/* END CUSTOM EDIT SECTION — Teachers Styles */
 
 /* ============================================================
    START CUSTOM EDIT SECTION — Charts, PDF Letter Header & Downloads
@@ -2155,8 +1968,9 @@ canvas.pa-chart {
 .cert-testi-bracket.tr { top: 30px; right: 30px; border-top: 3px solid #142e6e; border-right: 3px solid #142e6e; }
 .cert-testi-bracket.bl { bottom: 30px; left: 30px; border-bottom: 3px solid #142e6e; border-left: 3px solid #142e6e; }
 .cert-testi-bracket.br { bottom: 30px; right: 30px; border-bottom: 3px solid #142e6e; border-right: 3px solid #142e6e; }
-/* passport placeholder accent (top right) */
-.cert-testi-passport-mark { position: absolute; top: 60px; right: 56px; width: 90px; height: 76px; z-index: 2; pointer-events: none; }
+/* passport placeholder accent (top right) — moved down ~2cm below the
+   school name/address so it no longer overlaps or crosses the school name */
+.cert-testi-passport-mark { position: absolute; top: 155px; right: 56px; width: 90px; height: 76px; z-index: 2; pointer-events: none; }
 .cert-testi-passport-mark .l1 { position: absolute; top: 0; right: 0; width: 78px; height: 2px; background: #C0272D; }
 .cert-testi-passport-mark .l2 { position: absolute; top: 0; right: 0; width: 2px; height: 76px; background: #C0272D; }
 .cert-testi-passport-mark .txt {
@@ -2175,23 +1989,44 @@ canvas.pa-chart {
   margin: 16px 0 0; text-align: center; line-height: 1; position: relative; z-index: 1;
 }
 .cert-testi-title-underline { width: 200px; height: 2px; background: #C0272D; margin: 8px 0 16px; position: relative; z-index: 1; }
-.cert-testi-whom    { font-size: 15px; font-weight: 800; color: #161616; text-align: center; position: relative; z-index: 1; }
-.cert-testi-certify { font-size: 13.5px; font-weight: 700; color: #232323; margin: 3px 0 20px; text-align: center; position: relative; z-index: 1; }
+.cert-testi-whom    { font-size: 17px; font-weight: 800; color: #161616; text-align: center; position: relative; z-index: 1; }
+.cert-testi-certify { font-size: 16px; font-weight: 700; color: #232323; margin: 3px 0 20px; text-align: center; position: relative; z-index: 1; }
 .cert-testi-name {
-  font-family: 'Manrope', sans-serif; font-size: 27px; font-weight: 800; color: #142e6e;
+  font-family: 'Manrope', sans-serif; font-size: 30px; font-weight: 800; color: #142e6e;
   text-transform: uppercase; letter-spacing: .6px;
   border-bottom: 1.5px solid #222; padding: 0 30px 8px; margin-bottom: 16px;
   min-width: 66%; text-align: center; position: relative; z-index: 1;
 }
 .cert-testi-classarm { font-size: 11px; color: #6b6b6b; font-style: italic; margin: -10px 0 16px; position: relative; z-index: 1; }
-.cert-testi-line { font-size: 14px; font-weight: 700; color: #1c1c1c; text-align: center; margin: 4px 0; line-height: 1.6; max-width: 480px; position: relative; z-index: 1; }
-.cert-testi-yearrow { font-size: 14px; font-weight: 700; color: #1c1c1c; margin: 16px 0 12px; text-align: center; position: relative; z-index: 1; }
-.cert-testi-yearrow b { text-decoration: underline; text-underline-offset: 3px; color: #142e6e; font-family: 'Manrope',sans-serif; padding: 0 8px; }
-.cert-testi-conduct { font-size: 14px; font-weight: 700; margin: 4px 0 30px; text-align: center; position: relative; z-index: 1; }
+.cert-testi-line {
+  font-size: 17px; font-weight: 700; color: #1c1c1c; margin: 5px 0; line-height: 1.6;
+  width: 100%; box-sizing: border-box; text-align: justify; text-align-last: justify;
+  position: relative; z-index: 1;
+}
+.cert-testi-yearrow {
+  font-size: 17px; font-weight: 700; color: #1c1c1c; margin: 28px 0 20px;
+  width: 100%; box-sizing: border-box; text-align: justify; text-align-last: justify;
+  position: relative; z-index: 1;
+}
+.cert-testi-yearrow b {
+  display: inline-block; min-width: 78px; text-align: center;
+  border-bottom: 1.5px solid #142e6e; text-decoration: none;
+  color: #142e6e; font-family: 'Manrope',sans-serif; padding: 0 6px 2px; margin: 0 4px;
+}
+.cert-testi-conduct {
+  font-size: 17px; font-weight: 700; margin: 10px 0 6px;
+  width: 100%; box-sizing: border-box; text-align: justify; text-align-last: justify;
+  position: relative; z-index: 1;
+}
 .cert-testi-conduct b { text-decoration: underline; text-underline-offset: 3px; color: #142e6e; }
+.cert-testi-conduct-line2 {
+  font-size: 17px; font-weight: 700; color: #1c1c1c; margin: 0 0 28px;
+  width: 100%; box-sizing: border-box; text-align: center;
+  position: relative; z-index: 1;
+}
 .cert-testi-namesign-row {
   display: flex; justify-content: space-between; width: 100%; max-width: 480px;
-  margin: 6px 0 auto; font-size: 14px; font-weight: 800; color: #1c1c1c;
+  margin: 6px 0 auto; font-size: 17px; font-weight: 800; color: #1c1c1c;
   position: relative; z-index: 1;
 }
 .cert-testi-namesign-row .field-line {
@@ -2203,32 +2038,15 @@ canvas.pa-chart {
   margin-top: 24px; position: relative; z-index: 1;
 }
 .cert-testi-stamp-block, .cert-testi-sig-block { text-align: center; width: 165px; }
-.cert-testi-stamp-circle {
-  width: 118px; height: 118px; border-radius: 50%; margin: 0 auto 6px;
-  border: 1.5px solid #2a4d9e; position: relative;
-  display: flex; align-items: center; justify-content: center;
-}
-.cert-testi-stamp-circle-dotted {
-  position: absolute; inset: 9px; border-radius: 50%; border: 1.5px dotted #2a4d9e;
-}
-.cert-testi-stamp-curved-text { position: absolute; inset: 0; }
-.cert-testi-stamp-curved-text span {
-  position: absolute; left: 50%; top: 50%; font-size: 8px; font-weight: 800;
-  color: #2a4d9e; font-family: 'Manrope', sans-serif; letter-spacing: .5px;
-  transform-origin: 0 0;
-}
-.cert-testi-stamp-stars { position: absolute; inset: 0; }
-.cert-testi-stamp-stars span {
-  position: absolute; left: 50%; top: 50%; font-size: 8px; color: #2a4d9e;
-  transform-origin: 0 0;
-}
-.cert-testi-stamp-sig { width: 78px; height: auto; max-height: 40px; object-fit: contain; opacity: .92; margin-bottom: 1px; transform: rotate(-6deg); }
-.cert-testi-stamp-date { font-size: 6.8px; font-weight: 700; color: #2a4d9e; margin-top: 1px; }
+/* Stamp design removed per request — left blank, with just a signature-style
+   line above the "STAMP" label, matching the Headteacher's Sign block. */
+.cert-testi-stamp-blank { height: 66px; }
 .cert-testi-stamp-label { font-size: 10px; font-weight: 800; color: #222; letter-spacing: 1px; margin-top: 4px; }
 .cert-testi-seal-svg { width: 82px; height: 82px; margin: 0 auto 8px; display: block; }
 .cert-testi-sig-img { height: 66px; max-width: 160px; object-fit: contain; display: block; margin: 0 auto 3px; transform: rotate(-5deg); }
 .cert-testi-sig-line { border-top: 1.3px solid #333; width: 100%; margin: 2px 0; }
 .cert-testi-sig-title { font-size: 10px; font-weight: 800; color: #1c1c1c; letter-spacing: .6px; margin-top: 2px; }
+
 
 /* ══════════════════════════════════════════════════════
    CA TRACKER TAB — Custom Styles
@@ -2522,16 +2340,16 @@ canvas.pa-chart {
             <p>Sign in to your portal</p>
           </div>
           <div style="display:flex;justify-content:center;margin-bottom:18px;">
-            <span class="login-badge" id="login-badge-label">🔐 Smart Login</span>
+            <span class="login-badge" id="login-badge-label">🎓 Student Login</span>
           </div>
 
           <div id="smart-login-error" class="login-error"></div>
 
-          <label class="form-label">Username / Admission Number</label>
-          <input id="smart-username" class="form-input" type="text" placeholder="Admin username or admission no." autocomplete="off"
+          <label class="form-label">Admission Number</label>
+          <input id="smart-username" class="form-input" type="text" placeholder="e.g. PA/2024/001" autocomplete="off"
             oninput="onSmartUsernameInput(this.value)">
 
-          <!-- Class selector — hidden until student detected -->
+          <!-- Class selector — hidden until admission number typed -->
           <div id="smart-class-wrap">
             <label class="form-label">Your Class</label>
             <select id="smart-class" class="form-input" style="margin-bottom:14px;">
@@ -2547,7 +2365,7 @@ canvas.pa-chart {
 
           <label class="remember-row">
             <input type="checkbox" id="smart-remember">
-            <span>Remember my username</span>
+            <span>Remember my admission number</span>
           </label>
 
           <div id="smart-loading" class="loading-bar" style="margin-bottom:12px;display:none;">
@@ -2562,7 +2380,7 @@ canvas.pa-chart {
             <span style="font-size:11px;color:var(--dash-muted);">🔒 Secure Session</span>
           </div>
           <div class="login-switch" style="margin-top:8px;">
-            <a onclick="showScreen('screen-teacher-login')">👨‍🏫 Teacher / Staff Login →</a>
+            <a onclick="showScreen('screen-teacher-login')">🔐 Staff &amp; Admin Login →</a>
           </div>
         </div>
       </div>
@@ -2571,36 +2389,6 @@ canvas.pa-chart {
         Designed by <span>Arabo Modibbo</span>
       </div>
     </div>
-  </div>
-</div>
-
-<!-- ============================================================
-     SCREEN 2: ADMIN LOGIN
-     ============================================================ -->
-<div id="screen-admin-login" class="screen">
-  <div class="login-wrap">
-    <div class="login-card">
-      <div class="login-logo-wrap">
-        <img src="https://i.postimg.cc/qq1DrzQt/download.png" alt="School Logo" onerror="this.style.opacity='0'">
-      </div>
-      <div class="login-school">
-        <h1>Admin Portal</h1>
-        <p>Pariya Central Primary Report Card System</p>
-      </div>
-      <div style="display:flex;justify-content:center;margin-bottom:18px;">
-        <span class="login-badge">🔐 Administrator Access</span>
-      </div>
-      <div id="admin-error" class="login-error">❌ Invalid credentials. Please try again.</div>
-      <label class="form-label">Username</label>
-      <input id="admin-username" class="form-input" type="text" placeholder="Enter username" autocomplete="off">
-      <label class="form-label">Password</label>
-      <input id="admin-password" class="form-input" type="password" placeholder="Enter password">
-      <button class="btn-login" onclick="adminLogin()">Sign In →</button>
-      <div class="login-switch"><a onclick="showScreen('screen-portal')">← Back to portal</a></div>
-    </div>
-  </div>
-  <div class="copyright-footer">
-    © <span>2026 Pariya Central Primary</span>. All Rights Reserved. Designed by <span>Arabo Modibbo</span>
   </div>
 </div>
 
@@ -2643,7 +2431,12 @@ canvas.pa-chart {
 </div>
 
 <!-- ============================================================
-     SCREEN 3B: TEACHER LOGIN
+     SCREEN 3B: STAFF & ADMIN LOGIN (merged)
+     Purpose: Single login page for BOTH Admin and Teacher/Staff.
+     Credentials are looked up from the Teachers Master List sheet
+     (TEACHER_DIRECTORY_CSV_URL) — Password column for the password,
+     Rank column decides whether the account opens the Admin
+     Dashboard ("Admin") or the Teacher Dashboard (anything else).
      ============================================================ -->
 <div id="screen-teacher-login" class="screen">
   <div class="login-wrap">
@@ -2652,15 +2445,15 @@ canvas.pa-chart {
         <img src="https://i.postimg.cc/qq1DrzQt/download.png" alt="School Logo" onerror="this.style.opacity='0'">
       </div>
       <div class="login-school">
-        <h1>Teacher Portal</h1>
+        <h1>Staff &amp; Admin Portal</h1>
         <p>Pariya Central Primary — Staff Access</p>
       </div>
       <div style="display:flex;justify-content:center;margin-bottom:18px;">
-        <span class="login-badge" style="background:var(--ad-indigo-lt, rgba(139,90,43,0.15));border-color:var(--ad-indigo-md, rgba(139,90,43,0.3));color:#5C3317;">👨‍🏫 Teacher Access</span>
+        <span class="login-badge" style="background:var(--ad-indigo-lt, rgba(139,90,43,0.15));border-color:var(--ad-indigo-md, rgba(139,90,43,0.3));color:#5C3317;">🔐 Admin &amp; Teacher Access</span>
       </div>
-      <div id="teacher-login-error" class="login-error">❌ Teacher ID not found. Please check and try again.</div>
-      <label class="form-label">Teacher ID</label>
-      <input id="teacher-id-input" class="form-input" type="text" placeholder="e.g. T001" autocomplete="off">
+      <div id="teacher-login-error" class="login-error">❌ Staff ID not found. Please check and try again.</div>
+      <label class="form-label">Staff ID</label>
+      <input id="teacher-id-input" class="form-input" type="text" placeholder="e.g. T001 or ADM01" autocomplete="off">
       <label class="form-label">Password</label>
       <div class="input-wrap">
         <input id="teacher-password-input" class="form-input" type="password" placeholder="Enter password">
@@ -2669,7 +2462,7 @@ canvas.pa-chart {
       <div id="teacher-login-loading" class="loading-bar" style="margin-bottom:12px;display:none;">
         <div class="spinner"></div><span>Signing in…</span>
       </div>
-      <button class="btn-login" id="teacher-login-btn" style="background:linear-gradient(135deg,#5C3317,#8B5A2B);box-shadow:0 4px 16px rgba(92,51,23,0.3);" onclick="teacherLogin()">Sign In →</button>
+      <button class="btn-login" id="teacher-login-btn" style="background:linear-gradient(135deg,#5C3317,#8B5A2B);box-shadow:0 4px 16px rgba(92,51,23,0.3);" onclick="staffLogin()">Sign In →</button>
       <div class="login-switch"><a onclick="showScreen('screen-portal')">← Back to portal</a></div>
     </div>
   </div>
@@ -2705,9 +2498,6 @@ canvas.pa-chart {
         </button>
         <button class="ad-sb-item" onclick="switchTab('tab-classes');setAdActive(this)">
           <i class="fa-solid fa-school"></i> Classes
-        </button>
-        <button class="ad-sb-item" onclick="openFeesSection();setAdActive(this)">
-          <i class="fa-solid fa-money-bill-wave"></i> School Fees
         </button>
         <button class="ad-sb-item" onclick="switchTab('tab-timetable');setAdActive(this);ttShowDashboard();" title="Time Table">
           <i class="fa-solid fa-calendar-days"></i> 📅 Time Table
@@ -2828,9 +2618,6 @@ canvas.pa-chart {
           </button>
           <button class="ad-tab-btn" onclick="switchTab('tab-analytics');setAdTab(this)">
             <i class="fa-solid fa-chart-line"></i> Analytics
-          </button>
-          <button class="ad-tab-btn" onclick="openFeesSection();setAdTab(this)">
-            <i class="fa-solid fa-money-bill-wave"></i> Fees
           </button>
           <button class="ad-tab-btn" onclick="switchTab('tab-timetable');setAdTab(this);ttShowDashboard();">
             <i class="fa-solid fa-calendar-days"></i> Time Table
@@ -3104,65 +2891,6 @@ canvas.pa-chart {
           </div>
         </div>
 
-        <!-- ── FEES TAB ── -->
-        <div id="tab-fees" class="tab-panel">
-          <div id="fees-summary-view">
-            <div class="section-heading">School Fees Overview</div>
-            <div class="dl-btn-row">
-              <button class="btn-dl-pdf green" onclick="downloadFeesSummaryPDF()">📄 Download Fees Summary PDF</button>
-            </div>
-            <div id="fees-loading" class="loading-bar">
-              <div class="spinner"></div>
-              <span>Calculating fee data…</span>
-            </div>
-            <div style="overflow-x:auto;margin-bottom:16px;">
-              <table class="fees-summary-table" id="fees-summary-table">
-                <thead><tr><th>Section</th><th>Fee / Student</th><th>Students</th><th>Expected Total</th></tr></thead>
-                <tbody id="fees-summary-tbody">
-                  <tr><td colspan="4" style="color:var(--dash-muted);font-size:12px;text-align:center;">Click a class below to load data</td></tr>
-                </tbody>
-              </table>
-            </div>
-            <div class="fees-grand-total">
-              <span class="fees-grand-label">💰 Grand Total Expected</span>
-              <span class="fees-grand-value" id="fees-grand-total">₦0</span>
-            </div>
-            <div class="section-heading">Select Class to View Payments</div>
-            <div class="class-grid" id="fees-class-grid"></div>
-          </div>
-          <div id="fees-class-view" style="display:none;">
-            <button class="btn-section-back" onclick="showFeesSummaryView()">← Back to Overview</button>
-            <div class="section-heading" id="fees-class-heading">Select Term</div>
-            <div class="dl-btn-row">
-              <button class="btn-dl-pdf green" onclick="downloadFeesClassPDF()">📄 Download This Class Fees PDF</button>
-            </div>
-            <div class="term-selector-row">
-              <button class="btn-term-select" onclick="loadClassFeesData(currentFeesClass,'First Term',this)">📗 First Term</button>
-              <button class="btn-term-select" onclick="loadClassFeesData(currentFeesClass,'Second Term',this)">📘 Second Term</button>
-              <button class="btn-term-select" onclick="loadClassFeesData(currentFeesClass,'Third Term',this)">📙 Third Term</button>
-            </div>
-            <div class="fees-stats-row" id="fees-stats-row">
-              <div class="fees-stat-card"><div class="fees-stat-label">Total Students</div><div class="fees-stat-value" id="fees-stat-total">—</div><div class="fees-stat-sub">Enrolled</div></div>
-              <div class="fees-stat-card"><div class="fees-stat-label">Paid</div><div class="fees-stat-value" style="color:#C9973F;" id="fees-stat-paid">—</div><div class="fees-stat-sub">Fully paid</div></div>
-              <div class="fees-stat-card"><div class="fees-stat-label">Outstanding</div><div class="fees-stat-value" style="color:#B3401F;" id="fees-stat-outstanding">—</div><div class="fees-stat-sub">Not cleared</div></div>
-            </div>
-            <div class="fees-stats-row" style="margin-top:-4px;" id="fees-amount-row">
-              <div class="fees-stat-card"><div class="fees-stat-label">Amount Collected</div><div class="fees-stat-value" style="color:#C9973F;" id="fees-stat-collected">—</div><div class="fees-stat-sub">This term</div></div>
-              <div class="fees-stat-card"><div class="fees-stat-label">Outstanding Amount</div><div class="fees-stat-value" style="color:#B3401F;" id="fees-stat-owed">—</div><div class="fees-stat-sub">This term</div></div>
-              <div class="fees-stat-card"><div class="fees-stat-label">Collection Rate</div><div class="fees-stat-value" id="fees-stat-rate">—</div><div class="fees-stat-sub">Percent</div></div>
-            </div>
-            <div id="fees-class-loading" class="loading-bar"><div class="spinner"></div><span>Loading fees data…</span></div>
-            <div style="overflow-x:auto;">
-              <table class="fees-student-table" id="fees-student-table">
-                <thead><tr><th>#</th><th>Student Name</th><th>Admission No</th><th>Expected Fee</th><th>Amount Paid</th><th>Status</th></tr></thead>
-                <tbody id="fees-student-tbody">
-                  <tr><td colspan="6" style="color:var(--dash-muted);text-align:center;font-size:12px;">Select a term above to load</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
         <!-- ── ANALYTICS TAB ── -->
         <div id="tab-analytics" class="tab-panel">
           <div class="section-heading">📈 Advanced Analytics</div>
@@ -3273,6 +3001,22 @@ canvas.pa-chart {
               <button class="btn-export-pdf" style="background:linear-gradient(135deg,#1F5B3A,#173F29);" onclick="downloadAllTestimonials()">📥 Download All (One PDF)</button>
               <button class="btn-export-pdf" style="background:linear-gradient(135deg,#1E3A5F,#142642);" onclick="printAllTestimonials()">🖨️ Print All</button>
             </div>
+
+            <div style="border-top:1px solid var(--dash-border);margin:22px 0 18px;"></div>
+
+            <div class="section-heading">🖊️ Manual Testimonial Generator (Upload CSV)</div>
+            <p style="font-size:12px;color:var(--dash-muted);font-weight:600;margin-bottom:16px;max-width:560px;">
+              For a school without Google Sheets set up — upload a student list CSV, type in the school name/address, and upload the Head Teacher's signature image directly. Nothing here is saved to <code>SCHOOL_CONFIG</code>; it only applies to the certificates generated below.
+            </p>
+            <div style="display:flex;flex-direction:column;gap:10px;max-width:480px;margin-bottom:16px;">
+              <div><label class="form-label">School Name</label><input id="manual-testi-school-name" class="form-input" type="text" placeholder="e.g. Government Primary School, Kaduna"></div>
+              <div><label class="form-label">School Address</label><input id="manual-testi-school-address" class="form-input" type="text" placeholder="e.g. No. 5 Ahmadu Bello Way, Kaduna"></div>
+              <div><label class="form-label">Head Teacher Signature (image)</label><input id="manual-testi-sig-file" class="form-input" type="file" accept="image/*"></div>
+              <div><label class="form-label">Student List CSV File</label><input id="manual-testi-csv-file" class="form-input" type="file" accept=".csv,text/csv"></div>
+              <p style="font-size:11px;color:var(--dash-muted);font-weight:600;margin:0;">CSV needs at least a <code>Name</code> column. An <code>Admission No</code> column (or similar — Adm No, Registration Number, etc.) is optional and will be shown on the certificate if present.</p>
+              <button class="btn-export-pdf" style="margin-bottom:0;background:linear-gradient(135deg,#6B2E3B,#4A2530);" onclick="generateTestimonialsFromCSV()">🖊️ Generate From CSV</button>
+            </div>
+
             <div id="testimonial-certs-preview" style="margin-top:16px;"></div>
           </div>
         </div>
@@ -3284,7 +3028,7 @@ canvas.pa-chart {
             <div class="guide-section"><h3>🔧 Quick Setup</h3>
               <div class="guide-step"><h4>Step 1: Set Your School Details</h4><p>Find the <code>SCHOOL_CONFIG</code> object at the top of the JavaScript section. Edit <code>name</code>, <code>motto</code>, <code>address</code>, <code>session</code>, and logo URLs to match your school.</p></div>
               <div class="guide-step"><h4>Step 2: Connect Your Google Sheets</h4><p>Find the <code>CLASS_LINKS</code> object. For each class, paste your published Google Sheet CSV URLs for <code>first</code>, <code>second</code>, and <code>third</code> terms.</p></div>
-              <div class="guide-step"><h4>Step 3: Set Login Credentials</h4><p>Find <code>CREDENTIALS</code> and change <code>admin.username</code>, <code>admin.password</code>, and <code>student.password</code> to your preferred values.</p></div>
+              <div class="guide-step"><h4>Step 3: Set Login Credentials</h4><p>Student password: find <code>CREDENTIALS</code> and change <code>student.password</code>. Admin &amp; Teacher/Staff logins are NOT in the code — add a <code>Password</code> column and a <code>Rank</code> column (write <code>Admin</code> for admin accounts, anything else e.g. <code>Teacher</code> for staff) to your Teachers Master List sheet. Everyone in that sheet signs in from the same Staff &amp; Admin Login page using their Staff ID and the password from their row.</p></div>
             </div>
             <div class="guide-section"><h3>📊 Google Sheet Format</h3>
               <div class="guide-step"><h4>Required Columns</h4><p>Your sheet needs: <code>Name</code>, <code>Admission No</code>, <code>Gender</code>, <code>Class Type</code>, <code>Class Section</code>, <code>Term</code>. Subject columns follow the pattern: <code>SubjectName_CA1</code>, <code>SubjectName_CA2</code>, <code>SubjectName_Exams</code>.</p></div>
@@ -3296,16 +3040,17 @@ canvas.pa-chart {
             </div>
             <div class="guide-section"><h3>🏆 Awards &amp; Certificates</h3>
               <div class="guide-step"><h4>Best Student Awards (Automatic)</h4><p>Go to Analytics → Load All Analytics first. Then go to Awards → Best Student Award and click Generate. Certificates are produced automatically for all primary classes.</p></div>
-              <div class="guide-step"><h4>Certificate Signatures</h4><p>Upload signature images to PostImage and paste direct links into <code>SCHOOL_CONFIG</code>: <code>headmasterSig</code>, <code>primaryFormMasterSig</code>.</p></div>
+              <div class="guide-step"><h4>Report Card Signatures (Headmaster / Form Master)</h4><p>Add a <code>SignUrl</code> column to the Teachers Master List sheet and paste a direct image link (e.g. from PostImage) into it, on the row for whoever is Headmaster or a Form Master. The <code>Rank</code> column decides who is picked: write <code>Headmaster</code> on the headmaster's row, and <code>Form Master</code> on each class's form master's row (their assigned class comes from that same row's "Primary N" column). Their <code>Name</code> and <code>SignUrl</code> are then pulled onto the report card automatically — nothing is hardcoded in the code. If no matching row is found yet, it falls back to the <code>SCHOOL_CONFIG.headmasterName/headmasterSig/primaryFormMasterName/primaryFormMasterSig</code> defaults.</p></div>
+              <div class="guide-step"><h4>Certificate Signatures</h4><p>Upload signature images to PostImage and paste direct links into <code>SCHOOL_CONFIG</code>: <code>headmasterSig</code>, <code>primaryFormMasterSig</code>. (These certificate/testimonial signatures are separate from the report card ones above, which now come from the Teachers Master List sheet.)</p></div>
               <div class="guide-step"><h4>Testimonial Certificates (Automatic)</h4><p>Go to Awards → Testimonial Certificate and click Generate. It pulls every Primary 6 student (all arms) from their class sheet and produces one testimonial per student, with the Head Teacher's signature and school stamp applied automatically — the student's own signature line is left blank for them to sign.</p></div>
             </div>
             <div class="guide-section"><h3>🔐 Student Term PIN Codes</h3>
               <div class="guide-step"><h4>Term Lock PINs (Student Dashboard)</h4>
                 <p>Each term in the student result portal is locked with a 4-digit PIN. Share these with students or parents when a term is ready for viewing.</p>
                 <ul>
-                  <li>📘 <strong>First Term PIN:</strong> <code>4545</code></li>
-                  <li>📗 <strong>Second Term PIN:</strong> <code>8787</code></li>
-                  <li>📙 <strong>Third Term PIN:</strong> <code>9191</code></li>
+                  <li>📘 <strong>First Term PIN:</strong> <code>2024</code></li>
+                  <li>📗 <strong>Second Term PIN:</strong> <code>2025</code></li>
+                  <li>📙 <strong>Third Term PIN:</strong> <code>2026</code></li>
                 </ul>
                 <p style="margin-top:6px;">To change these PINs, locate the <code>TERM_PINS</code> object in the JavaScript section near the bottom of the file.</p>
               </div>
@@ -3468,13 +3213,6 @@ canvas.pa-chart {
               </div>
             </div>
             <div class="settings-card">
-              <div class="settings-card-title">🔒 Security</div>
-              <div class="settings-row">
-                <div><div class="settings-row-label">Admin PIN</div><div class="settings-row-sub">Required to access the Fees section</div></div>
-                <code style="font-size:12px;background:var(--dash-bg);padding:4px 10px;border-radius:6px;color:var(--dash-accent);border:1px solid var(--dash-border);">Change in SECURITY_PIN config</code>
-              </div>
-            </div>
-            <div class="settings-card">
               <div class="settings-card-title">📊 Data Management</div>
               <div class="settings-row">
                 <div><div class="settings-row-label">Clear Analytics Cache</div><div class="settings-row-sub">Force reload all class analytics data</div></div>
@@ -3572,7 +3310,7 @@ canvas.pa-chart {
           <!-- Toolbar with search and generate button -->
           <div class="class-detail-toolbar">
             <input type="text" class="class-search-input" id="detail-search" placeholder="🔍 Search student by name or admission…" oninput="filterDetailTable()">
-            <input type="text" class="class-search-input" id="detail-formmaster" placeholder="✍️ Form Master name (optional — leave blank to use default)" style="max-width:280px;">
+            <input type="text" class="class-search-input" id="detail-formmaster" placeholder="✍️ Form Master name (optional — leave blank to use Teachers Master List)" style="max-width:280px;">
             <button class="btn-gen-all" onclick="generateFromDetail()">📋 Generate All Results</button>
           </div>
 
@@ -4081,79 +3819,6 @@ canvas.pa-chart {
 </div>
 <!-- END CUSTOM EDIT SECTION — Teacher Portal -->
 
-<!-- ============================================================
-     START CUSTOM EDIT SECTION — PIN Security Modal
-     ============================================================ -->
-<div id="pin-modal-overlay" class="pin-modal-overlay hidden">
-  <div class="pin-modal">
-    <h3>🔐 Security Required</h3>
-    <p id="pin-modal-subtitle">Enter 4-digit PIN to continue</p>
-    <div class="pin-dots" id="pin-dots">
-      <div class="pin-dot" id="pd0"></div>
-      <div class="pin-dot" id="pd1"></div>
-      <div class="pin-dot" id="pd2"></div>
-      <div class="pin-dot" id="pd3"></div>
-    </div>
-    <div class="pin-error" id="pin-error">❌ Incorrect Security PIN</div>
-    <div class="pin-keypad">
-      <button class="pin-key" onclick="pinInput('1')">1</button>
-      <button class="pin-key" onclick="pinInput('2')">2</button>
-      <button class="pin-key" onclick="pinInput('3')">3</button>
-      <button class="pin-key" onclick="pinInput('4')">4</button>
-      <button class="pin-key" onclick="pinInput('5')">5</button>
-      <button class="pin-key" onclick="pinInput('6')">6</button>
-      <button class="pin-key" onclick="pinInput('7')">7</button>
-      <button class="pin-key" onclick="pinInput('8')">8</button>
-      <button class="pin-key" onclick="pinInput('9')">9</button>
-      <button class="pin-key pin-del" onclick="pinClear()">⌫ Clear</button>
-      <button class="pin-key" onclick="pinInput('0')">0</button>
-      <button class="pin-key pin-del" onclick="pinBackspace()">← Del</button>
-    </div>
-    <button class="btn-pin-cancel" onclick="closePinModal()">Cancel</button>
-  </div>
-</div>
-<!-- END CUSTOM EDIT SECTION — PIN Security Modal -->
-
-<!-- ============================================================
-     START CUSTOM EDIT SECTION — Student Fees Blocked Screen
-     ============================================================ -->
-<div id="screen-fees-blocked" class="screen">
-  <div class="login-wrap">
-    <div class="fees-blocked-card">
-      <div class="fees-blocked-icon">🔒</div>
-      <div class="fees-blocked-title">⚠️ REPORT CARD BLOCKED</div>
-      <div class="fees-blocked-msg">
-        You are not allowed to view your report card because your school fees payment for this term is incomplete.
-      </div>
-      <table class="fees-blocked-table">
-        <tr><td>Student Name</td><td id="blocked-name" style="color:var(--dash-text);font-weight:900;">—</td></tr>
-        <tr><td>Class</td><td id="blocked-class" style="color:var(--dash-text);font-weight:900;">—</td></tr>
-        <tr><td>Term</td><td id="blocked-term" style="color:var(--dash-text);font-weight:900;">—</td></tr>
-        <tr><td>Expected Fee</td><td id="blocked-expected" style="color:var(--dash-accent);font-weight:900;">—</td></tr>
-        <tr><td>Amount Paid</td><td id="blocked-paid" style="color:#C9973F;font-weight:900;">—</td></tr>
-        <tr><td>Outstanding</td><td id="blocked-outstanding" style="color:#B3401F;font-weight:900;">—</td></tr>
-      </table>
-      <div class="fees-blocked-contact">
-        📞 Please contact the school management after completing payment to gain access to your result.
-      </div>
-      <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px;">
-        <button class="btn-login" onclick="feesBlockedChangeTerm()"
-          style="background:linear-gradient(135deg,var(--dash-green),#5C3317);font-size:13px;padding:11px;">
-          ← Try Another Term
-        </button>
-        <button class="btn-logout" onclick="logout()"
-          style="width:100%;padding:10px;font-size:13px;border-radius:var(--radius-sm);">
-          🚪 Back to Login
-        </button>
-      </div>
-    </div>
-  </div>
-  <div class="copyright-footer">
-    © <span>2026 Pariya Central Primary</span>. All Rights Reserved. Designed by <span>Arabo Modibbo</span>
-  </div>
-</div>
-<!-- END CUSTOM EDIT SECTION — Student Fees Blocked Screen -->
-
 <!-- Hidden print container -->
 <div id="printContainer" style="display:none;"></div>
 
@@ -4217,13 +3882,15 @@ const SCHOOL_CONFIG = {
 /* ============================================================
    CREDENTIALS
    ── HOW TO EDIT: ──
-   Change admin.username, admin.password and student.password
-   to your desired login credentials.
+   Only student.password lives in the code. Admin and Teacher/Staff
+   passwords are NO LONGER stored here — they now live in the
+   Teachers Master List Google Sheet (TEACHER_DIRECTORY_CSV_URL),
+   which must have a "Password" column (each staff member's login
+   password) and a "Rank" column ("Admin" for admin access, anything
+   else — e.g. "Teacher" — for regular staff/teacher access).
    ============================================================ */
 const CREDENTIALS = {
-  admin:   { username: "Pariya", password: "Pariya2026" },
-  student: { password: "student123" },
-  teacher: { password: "Teacher2026" }
+  student: { password: "student123" }
 };
 
 /* ============================================================
@@ -4267,7 +3934,7 @@ const CREDENTIALS = {
    4. Do the SAME for CLASS_META just below this block — copy the
       matching "Primary 1B" line, rename it to "Primary 1C".
    That's it — every other part of the app (class grid, student
-   class dropdown, fees, CA tracker, report cards) reads its class
+   class dropdown, CA tracker, report cards) reads its class
    list directly from these two objects, so a new arm shows up
    everywhere automatically. No other code needs to change.
    ============================================================ */
@@ -4417,22 +4084,11 @@ function escapeHtml(s) {
 
 /* ============================================================
    ADMIN LOGIN
-   Purpose: Authenticate admin and open dashboard
+   Admin no longer has its own screen/function — Admin accounts now
+   sign in through staffLogin() on the merged Staff & Admin Login
+   screen, using the Password + Rank columns from the Teachers
+   Master List sheet (Rank = "Admin").
    ============================================================ */
-function adminLogin() {
-  const u   = $('admin-username').value.trim();
-  const p   = $('admin-password').value;
-  const err = $('admin-error');
-  if (u === CREDENTIALS.admin.username && p === CREDENTIALS.admin.password) {
-    err.style.display = 'none';
-    initAdminDashboard();
-    showScreen('screen-admin-dash');
-    showToast('✅ Welcome, Admin!');
-  } else {
-    err.style.display = 'block';
-    $('admin-password').value = '';
-  }
-}
 
 /* ============================================================
    STUDENT CLASS DROPDOWN — populate from CLASS_LINKS keys
@@ -4608,16 +4264,6 @@ function studentLoadTerm(term) {
         return;
       }
 
-      // ── PER-TERM FEES CHECK ──
-      // Uses the Fees column from THIS term's CSV so each term is checked independently.
-      // If the student hasn't paid for this specific term, block the report card.
-      if (blockStudentResultIfUnpaid(stuRecord, studentLoginData.className, term)) {
-        // Put the UI back to term-selection so the student can try a different term
-        $('student-term-select').style.display = 'block';
-        $('student-report-panel').style.display = 'none';
-        return;
-      }
-
       // ── STEP 3: Determine the logged-in student's class group ──
       const studentClassType    = (stuRecord['Class Type']    || '').trim();
       const studentClassSection = (stuRecord['Class Section'] || '').trim();
@@ -4639,7 +4285,7 @@ function studentLoadTerm(term) {
       }
 
       // ── STEP 6: Render ALL class students (needed for correct ranking) ──
-      renderCards(area, classStudentsWithTerm);
+      await renderCards(area, classStudentsWithTerm);
 
       // ── STEP 7: Hide all cards EXCEPT the logged-in student's card ──
       // renderCards() rendered one .card per student so positions are correct.
@@ -4717,6 +4363,26 @@ function checkStudentAward(stuRecord, allStudents, term) {
   const isAwardee = myAdm && topAdm && myAdm === topAdm;
 
   if (isAwardee) {
+    // START CUSTOM EDIT — Student sees their own award certificate
+    // Previously this just told the student to "visit the Admin
+    // Awards section" (which they can't access). Now we build the
+    // same certificate the admin generates and render it right here,
+    // with a download button, using buildStudentCertHTML() (shared
+    // with the Admin → Awards panel) so the design always matches.
+    const className = (stuRecord['Class Type']    || studentLoginData.className || '').trim();
+    const section    = (stuRecord['Class Section'] || '').trim();
+    const certId     = 'sd-cert-award';
+
+    const certHtml = buildStudentCertHTML({
+      _id: certId,
+      name: myName,
+      className: className,
+      section: section,
+      awardTitle: `Best Student — ${term}`,
+      citation: `In recognition of outstanding academic performance, ranking highest in class with an average of ${myAvg.toFixed(1)}% for ${term} of the ${SCHOOL_CONFIG.session} academic session.`,
+      annualAvg: null
+    });
+
     awardEl.innerHTML = `
       <div style="text-align:center;padding:20px 0 12px;">
         <div style="font-size:56px;margin-bottom:8px;animation:bounce-icon .8s ease infinite alternate;">🏆</div>
@@ -4727,10 +4393,17 @@ function checkStudentAward(stuRecord, allStudents, term) {
         <div style="display:inline-block;background:linear-gradient(135deg,#C9973F22,#E8C77E22);border:1.5px solid #C9973F55;border-radius:10px;padding:8px 18px;font-size:12px;font-weight:700;color:#A9722E;margin-bottom:14px;">
           Class Average: <strong style="font-size:14px;color:#6F4520;">${myAvg.toFixed(1)}%</strong> — Highest in Class
         </div>
-        <div style="font-size:11px;color:var(--sd-ink3);font-weight:600;margin-bottom:14px;">
-          You have been awarded the <strong>Best Student of the Year</strong> certificate for this term. Visit the Admin Awards section to download your certificate.
-        </div>
+      </div>
+      <div style="overflow-x:auto;padding-bottom:6px;">
+        ${certHtml}
+      </div>
+      <div style="text-align:center;margin-top:14px;">
+        <button class="btn-action btn-student-dl" style="min-width:220px;margin-bottom:0;display:inline-flex;"
+          onclick="downloadCertPDF(document.getElementById('cert-stu-${certId}'), 'Certificate_${myName.replace(/\s/g,'_')}.pdf')">
+          <i class="fa-solid fa-download"></i> Download My Certificate
+        </button>
       </div>`;
+    // END CUSTOM EDIT
   } else {
     const diff = topAvg - myAvg;
     awardEl.innerHTML = `
@@ -5034,10 +4707,12 @@ function generateFromDetail() {
       const area = $('reportArea');
       area.innerHTML = '';
       // Use the manually-typed Form Master name if the admin filled it in,
-      // otherwise renderCards() falls back to SCHOOL_CONFIG.primaryFormMasterName.
+      // otherwise renderCards() looks up whoever has Rank = "Form Master"
+      // for this class in the Teachers Master List sheet, and finally
+      // falls back to SCHOOL_CONFIG.primaryFormMasterName if neither exists.
       const fmInput = $('detail-formmaster');
       const formMasterOverride = fmInput ? fmInput.value.trim() : '';
-      renderCards(area, students, formMasterOverride);
+      await renderCards(area, students, formMasterOverride);
       $('reportWrapper').scrollIntoView({ behavior: 'smooth' });
       showToast(`✅ ${students.length} cards generated for ${currentClass} (${currentTerm})`);
     })
@@ -5274,7 +4949,7 @@ function getAnnualRemark(grade) {
 
 /* Get the scoring mode (Primary school only) */
 function getScoringMode(category) {
-  return { s1:20, s2:20, s3:0, exam:60, total:100, isJssSs:false };
+  return { s1:15, s2:15, s3:0, exam:70, total:100, isJssSs:false };
 }
 
 /* Get CSS class name for a card based on school category */
@@ -5391,12 +5066,20 @@ function calculateAnnualPositions(students) {
    4. Build HTML card for each student
    5. Generate QR codes
    ============================================================ */
-/* Simple grey silhouette used when a student has no photo on file */
+/* Simple grey silhouette — no longer used on the report card itself
+   (kept here in case it's needed again), now that the top-right box
+   always shows the Coat of Arms below instead of a student photo. */
 const RC_DEFAULT_PHOTO_SVG = `<svg viewBox="0 0 64 64" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
   <rect width="64" height="64" fill="#EDE0CC"/>
   <circle cx="32" cy="24" r="12" fill="#A98A6D"/>
   <path d="M10 58c0-14 10-22 22-22s22 8 22 22" fill="#A98A6D"/>
 </svg>`;
+
+/* 👉 Report card top-right logo (Coat of Arms) — direct image link.
+   Shown on EVERY student's report card in the box that used to hold
+   the student's own passport photo. Change this link any time to
+   swap the image. */
+const RC_COAT_OF_ARMS_URL = "https://i.postimg.cc/Kv54wr7P/coat-of-arm.jpg";
 
 /* Lenient date parser: handles ISO ("2026-09-12"), "DD/MM/YYYY", and
    free-text school dates like "12 Sept. 2026" or "12th September 2026". */
@@ -5431,8 +5114,14 @@ function calcHolidayDuration(closingRaw, resumptionRaw) {
   return `${days} Day${days === 1 ? '' : 's'}`;
 }
 
-function renderCards(container, rawStudents, formMasterOverride) {
+async function renderCards(container, rawStudents, formMasterOverride) {
   container.innerHTML = '';
+
+  // START CUSTOM EDIT — Dynamic Form Master / Headmaster
+  // Make sure the Teachers Master List (with its "Rank" and "SignUrl"
+  // columns) is loaded before we start building signature blocks below.
+  await ensureTeacherDirectoryLoaded();
+  // END CUSTOM EDIT
 
   // Detect subjects from column headers (e.g. "Mathematics_CA1" → "Mathematics")
   const allHeaders = Object.keys(rawStudents[0]);
@@ -5606,12 +5295,29 @@ function renderCards(container, rawStudents, formMasterOverride) {
       const catClass = getCardCategoryClass(stu.category);
       card.className = `card ${catClass}`;
 
-      /* Authority: Headmaster (primary school only) */
-      const authorityName    = SCHOOL_CONFIG.headmasterName;
-      const authoritySig     = SCHOOL_CONFIG.headmasterSig;
+      /* Authority: Headmaster (primary school only)
+         START CUSTOM EDIT — Dynamic Form Master / Headmaster
+         Name + signature now come from the Teachers Master List sheet:
+         whichever staff row has Rank = "Headmaster" supplies the
+         headmaster's name/SignUrl, and whichever row has
+         Rank = "Form Master" (matched to this student's class via
+         the teacher's "Primary N" columns, if more than one exists)
+         supplies the form master's. If nobody in the sheet carries
+         that rank yet, it quietly falls back to the SCHOOL_CONFIG
+         defaults below so nothing breaks. */
+      const headmasterStaff   = findStaffByRank('Headmaster');
+      const formMasterStaff   = findStaffByRank('Form Master', stu.classType);
+
+      const authorityName    = headmasterStaff ? headmasterStaff.Name    : SCHOOL_CONFIG.headmasterName;
+      const authoritySig     = headmasterStaff ? headmasterStaff.SignUrl : SCHOOL_CONFIG.headmasterSig;
       const authorityTitle   = 'Headmaster';
-      const formMasterName   = (formMasterOverride && formMasterOverride.trim()) ? formMasterOverride.trim() : SCHOOL_CONFIG.primaryFormMasterName;
-      const formMasterSig    = SCHOOL_CONFIG.primaryFormMasterSig;
+      const formMasterName   = (formMasterOverride && formMasterOverride.trim())
+                                  ? formMasterOverride.trim()
+                                  : (formMasterStaff ? formMasterStaff.Name : SCHOOL_CONFIG.primaryFormMasterName);
+      const formMasterSig    = (formMasterOverride && formMasterOverride.trim())
+                                  ? SCHOOL_CONFIG.primaryFormMasterSig
+                                  : (formMasterStaff ? formMasterStaff.SignUrl : SCHOOL_CONFIG.primaryFormMasterSig);
+      // END CUSTOM EDIT
       const website          = SCHOOL_CONFIG.primaryWebsite;
 
       /* Logo HTML */
@@ -5731,10 +5437,13 @@ function renderCards(container, rawStudents, formMasterOverride) {
       if (website) contactParts.push(`<span>Website: <a href="${website}" target="_blank" style="color:inherit;text-decoration:none;">${escapeHtml(website)}</a></span>`);
       const contactHtml = contactParts.length ? `<div class="rc-contact">${contactParts.join('')}</div>` : '';
 
-      /* ─── Student photo (falls back to a placeholder silhouette) ─── */
-      const photoHtml = stu['Photo']
-        ? `<img src="${escapeHtml(stu['Photo'])}" alt="" onerror="this.parentElement.innerHTML=RC_DEFAULT_PHOTO_SVG">`
-        : RC_DEFAULT_PHOTO_SVG;
+      /* ─── Top-right report card image — Coat of Arms ───
+         START CUSTOM EDIT — was previously the student's own passport
+         photo (or a placeholder silhouette if no "Photo" column value
+         was found). Now always shows the school's Coat of Arms logo
+         instead, on every report card, via RC_COAT_OF_ARMS_URL. */
+      const photoHtml = `<img src="${RC_COAT_OF_ARMS_URL}" alt="Coat of Arms" onerror="this.style.opacity='0'">`;
+      // END CUSTOM EDIT
 
       /* ─── Misc bio-data fields ─── */
       const dob          = escapeHtml(stu['Date of Birth'] || stu['DOB'] || '');
@@ -6712,7 +6421,6 @@ async function exportGuidePDF() {
 window.addEventListener('load', () => {
   document.documentElement.style.setProperty('--watermark', `url('${SCHOOL_CONFIG.schoolLogo}')`);
   // Safely attach enter-key handlers (elements may not exist in unified login)
-  const ap = $('admin-password');   if (ap) ap.addEventListener('keydown', e => { if (e.key==='Enter') adminLogin(); });
   const sp = $('student-password'); if (sp) sp.addEventListener('keydown', e => { if (e.key==='Enter') studentLogin(); });
   // Pre-populate logo in portal screen
   const pl = $('portalLogoImg');
@@ -6734,7 +6442,6 @@ window.safePrint                   = safePrint;
 window.clearOnFocus                = clearOnFocus;
 window.restoreOnBlur               = restoreOnBlur;
 window.showScreen                  = showScreen;
-window.adminLogin                  = adminLogin;
 window.studentLogin                = studentLogin;
 window.logout                      = logout;
 window.studentDownloadCard         = studentDownloadCard;
@@ -6758,11 +6465,6 @@ window.renderWebsites              = renderWebsites;
 /* ============================================================
    START CUSTOM EDIT SECTION — New Config Variables
    ============================================================ */
-const SECURITY_PIN = "2017";
-
-const SCHOOL_FEES = {
-  primary: 3000
-};
 
 // Paste your Google Sheet Teachers CSV URL here (columns: Teacher Name, Section,
 // Subjects, Classes, First Term Month 1-3, Second Term Month 1-3, Third Term Month 1-3)
@@ -6771,90 +6473,7 @@ const TEACHERS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTejbr
 // Cache for loaded teachers data
 let teachersData = [];
 let currentTeacherSection = '';
-let currentFeesClass = '';
-let pinTarget = ''; // 'teachers' | 'fees'
-let pinValue  = '';
 /* END CUSTOM EDIT SECTION — New Config Variables */
-
-/* ============================================================
-   START CUSTOM EDIT SECTION — PIN Security System
-   ============================================================ */
-function verifySecurityPin(target) {
-  pinTarget = target;
-  pinValue  = '';
-  updatePinDots();
-  const overlay = document.getElementById('pin-modal-overlay');
-  const subtitle = document.getElementById('pin-modal-subtitle');
-  const err = document.getElementById('pin-error');
-  subtitle.textContent = target === 'teachers'
-    ? 'Enter 4-digit PIN to access Teachers section'
-    : 'Enter 4-digit PIN to access School Fees section';
-  err.classList.remove('show');
-  overlay.classList.remove('hidden');
-}
-
-function closePinModal() {
-  document.getElementById('pin-modal-overlay').classList.add('hidden');
-  pinValue = '';
-  updatePinDots();
-}
-
-function pinInput(digit) {
-  if (pinValue.length >= 4) return;
-  pinValue += digit;
-  updatePinDots();
-  if (pinValue.length === 4) {
-    setTimeout(checkPin, 150);
-  }
-}
-
-function pinBackspace() {
-  pinValue = pinValue.slice(0, -1);
-  updatePinDots();
-}
-
-function pinClear() {
-  pinValue = '';
-  updatePinDots();
-}
-
-function updatePinDots() {
-  for (let i = 0; i < 4; i++) {
-    const dot = document.getElementById('pd' + i);
-    if (dot) dot.classList.toggle('filled', i < pinValue.length);
-  }
-}
-
-function checkPin() {
-  if (pinValue === SECURITY_PIN) {
-    closePinModal();
-    if (pinTarget === 'fees') {
-      switchTab('tab-fees');
-      showFeesSummaryView();
-      calculateSchoolFeesSummary();
-    }
-  } else {
-    const err = document.getElementById('pin-error');
-    err.classList.remove('show');
-    void err.offsetWidth; // reflow to restart animation
-    err.classList.add('show');
-    pinValue = '';
-    updatePinDots();
-  }
-}
-/* END CUSTOM EDIT SECTION — PIN Security System */
-
-/* ============================================================
-   START CUSTOM EDIT SECTION — Open Teachers / Fees Sections
-   ============================================================ */
-function openTeachersSection() {
-  verifySecurityPin('teachers');
-}
-
-function openFeesSection() {
-  verifySecurityPin('fees');
-}
-/* END CUSTOM EDIT SECTION */
 
 /* ============================================================
    START CUSTOM EDIT SECTION — Teachers Feature
@@ -7294,225 +6913,9 @@ function renderTeacherPaymentTable(teacher) {
 /* END CUSTOM EDIT SECTION — Teachers Feature */
 
 /* ============================================================
-   START CUSTOM EDIT SECTION — School Fees Feature
+   START CUSTOM EDIT SECTION — Student Login Handler
    ============================================================ */
-
-/* Build class cards inside the fees tab */
-function buildFeesClassGrid() {
-  const grid = document.getElementById('fees-class-grid');
-  if (!grid) return;
-  grid.innerHTML = '';
-  Object.keys(CLASS_LINKS).forEach(name => {
-    const meta = CLASS_META[name] || { icon:'📋', category:'primary', badge:'primary' };
-    const card = document.createElement('div');
-    card.className = `class-card cat-${meta.badge}`;
-    card.innerHTML = `
-      <div class="class-card-badge badge-${meta.badge}">${meta.category.toUpperCase()}</div>
-      <div class="class-card-icon">${meta.icon}</div>
-      <div class="class-card-name">${name}</div>
-      <div class="class-card-sub">Tap to view payments</div>
-    `;
-    card.addEventListener('click', () => openFeesClassView(name));
-    grid.appendChild(card);
-  });
-}
-
-/** Helper: get expected fee for a class */
-function getExpectedFeeForClass(className) {
-  return SCHOOL_FEES.primary;
-}
-
-/** Helper: get category key for a class */
-function getClassCategory(className) {
-  return 'Primary';
-}
-
-async function calculateSchoolFeesSummary() {
-  const loader = document.getElementById('fees-loading');
-  loader.classList.add('visible');
-  buildFeesClassGrid();
-
-  // Group classes by section
-  const sections = {
-    'Primary':          { fee: SCHOOL_FEES.primary, count: 0 },
-  };
-
-  // Count students per section from first-term CSVs
-  const classNames = Object.keys(CLASS_LINKS).filter(n => classHasAnyUrl(n));
-  const counts = await Promise.all(classNames.map(async name => {
-    try {
-      const url = getTermUrl(name, 'First Term');
-      if (!url) return { name, count: 0 };
-      const csv = await fetchCSV(url);
-      const records = parseCSV(csv);
-      return { name, count: records.length };
-    } catch { return { name, count: 0 }; }
-  }));
-
-  counts.forEach(({ name, count }) => {
-    const cat = getClassCategory(name);
-    if (sections[cat]) sections[cat].count += count;
-  });
-
-  // Render summary table
-  const tbody = document.getElementById('fees-summary-tbody');
-  let grand = 0;
-  const sectionIcons = { 'Primary':'📚' };
-
-  tbody.innerHTML = Object.entries(sections).map(([sec, { fee, count }]) => {
-    const total = fee * count;
-    grand += total;
-    return `<tr>
-      <td>${sectionIcons[sec] || ''} ${sec}</td>
-      <td>₦${fee.toLocaleString()}</td>
-      <td>${count}</td>
-      <td style="color:var(--dash-accent);font-weight:900;">₦${total.toLocaleString()}</td>
-    </tr>`;
-  }).join('');
-
-  document.getElementById('fees-grand-total').textContent = '₦' + grand.toLocaleString();
-  loader.classList.remove('visible');
-}
-
-function showFeesSummaryView() {
-  document.getElementById('fees-summary-view').style.display = '';
-  document.getElementById('fees-class-view').style.display = 'none';
-}
-
-function openFeesClassView(className) {
-  currentFeesClass = className;
-  document.getElementById('fees-class-heading').textContent =
-    (CLASS_META[className] ? CLASS_META[className].icon + ' ' : '') + className + ' — Select Term';
-  document.getElementById('fees-summary-view').style.display = 'none';
-  document.getElementById('fees-class-view').style.display = '';
-
-  // Reset stats
-  ['fees-stat-total','fees-stat-paid','fees-stat-outstanding','fees-stat-collected','fees-stat-owed','fees-stat-rate']
-    .forEach(id => { const el = document.getElementById(id); if(el) el.textContent = '—'; });
-  document.getElementById('fees-student-tbody').innerHTML =
-    '<tr><td colspan="6" style="color:var(--dash-muted);text-align:center;font-size:12px;">Select a term above</td></tr>';
-
-  // Clear active on term buttons
-  document.querySelectorAll('.btn-term-select').forEach(b => b.classList.remove('active'));
-}
-
-async function loadClassFeesData(className, term, btn) {
-  if (!className) return;
-  document.querySelectorAll('.btn-term-select').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-
-  const url = getTermUrl(className, term);
-  if (!url) {
-    showToast(`❌ No ${term} data for ${className}.`, 'error');
-    return;
-  }
-
-  const loader = document.getElementById('fees-class-loading');
-  loader.classList.add('visible');
-
-  try {
-    const csv     = await fetchCSV(url);
-    const records = parseCSV(csv);
-    const expected = getExpectedFeeForClass(className);
-
-    let paid = 0, outstanding = 0, collected = 0, owed = 0;
-
-    const rows = records.map((stu, i) => {
-      const rawFee = (stu['Fees'] || '').toString().replace(/[₦,\s]/g, '');
-      const amountPaid = parseFloat(rawFee) || 0;
-      const override   = getFeeOverride(className, term, stu['Admission No'] || '');
-      const isPaid     = override !== null ? override : (amountPaid >= expected);
-      if (isPaid) { paid++; collected += amountPaid >= expected ? amountPaid : expected; }
-      else { outstanding++; owed += (expected - amountPaid); }
-
-      const statusBadge = isPaid
-        ? '<span class="pay-badge paid">✔ Paid</span>'
-        : '<span class="pay-badge unpaid">✘ Outstanding</span>';
-      const admNo = escapeHtml(stu['Admission No'] || '');
-      const markBtn = `<button class="btn-mark-paid${isPaid ? ' marked' : ''}"
-        onclick="adminMarkStudentPaid('${className.replace(/'/g,"\\'")}','${term}','${admNo}',${isPaid},this)">
-        ${isPaid ? '✔ Paid' : '✘ Unpaid'}</button>`;
-
-      return `<tr>
-        <td>${i + 1}</td>
-        <td>${escapeHtml(stu['Name'] || '—')}</td>
-        <td>${admNo}</td>
-        <td>₦${expected.toLocaleString()}</td>
-        <td>₦${amountPaid.toLocaleString()}</td>
-        <td>${statusBadge} ${markBtn}</td>
-      </tr>`;
-    }).join('');
-
-    const total = records.length;
-    const rate  = total > 0 ? Math.round((paid / total) * 100) : 0;
-
-    document.getElementById('fees-stat-total').textContent       = total;
-    document.getElementById('fees-stat-paid').textContent        = paid;
-    document.getElementById('fees-stat-outstanding').textContent = outstanding;
-    document.getElementById('fees-stat-collected').textContent   = '₦' + collected.toLocaleString();
-    document.getElementById('fees-stat-owed').textContent        = '₦' + owed.toLocaleString();
-    document.getElementById('fees-stat-rate').textContent        = rate + '%';
-    document.getElementById('fees-student-tbody').innerHTML      = rows || '<tr><td colspan="6" style="text-align:center;color:var(--dash-muted);">No students found</td></tr>';
-  } catch(e) {
-    showToast('❌ Failed to load fees data.', 'error');
-  }
-
-  loader.classList.remove('visible');
-}
-/* END CUSTOM EDIT SECTION — School Fees Feature */
-
-/* ============================================================
-   START CUSTOM EDIT SECTION — Student Fees Block (modifies studentLogin)
-   Purpose: Blocks student report card if fees are not paid.
-   Extends the existing studentLogin() without removing anything.
-   ============================================================ */
-function checkStudentFeesStatus(student, className) {
-  const expected  = getExpectedFeeForClass(className);
-  const rawFee    = (student['Fees'] || '').toString().replace(/[₦,\s]/g, '');
-  const paid      = parseFloat(rawFee) || 0;
-  return { expected, paid, isPaid: paid >= expected, outstanding: Math.max(0, expected - paid) };
-}
-
-/**
- * Checks the student's Fees column for the given term's data.
- * If unpaid, shows the blocked screen with full details and returns true.
- * @param {object} student    — the parsed CSV row for this student (from the term's own CSV)
- * @param {string} className  — e.g. "JSS 2"
- * @param {string} term       — e.g. "Second Term"  (pass '' when checking at login)
- * @returns {boolean} true = blocked, false = allowed
- */
-function blockStudentResultIfUnpaid(student, className, term) {
-  const { expected, paid, isPaid, outstanding } = checkStudentFeesStatus(student, className);
-  if (isPaid) return false; // allowed
-
-  // Populate blocked screen fields
-  const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-  setTxt('blocked-name',        student['Name'] || '—');
-  setTxt('blocked-class',       className       || '—');
-  setTxt('blocked-term',        term            || '—');
-  setTxt('blocked-expected',    '₦' + expected.toLocaleString());
-  setTxt('blocked-paid',        '₦' + paid.toLocaleString());
-  setTxt('blocked-outstanding', '₦' + outstanding.toLocaleString());
-
-  showScreen('screen-fees-blocked');
-  return true; // blocked
-}
-
-/** Returns the student back to the term-selection screen after seeing the blocked screen */
-function feesBlockedChangeTerm() {
-  showScreen('screen-student-dash');
-  const termSel   = document.getElementById('student-term-select');
-  const reportPnl = document.getElementById('student-report-panel');
-  if (termSel)   termSel.style.display   = 'block';
-  if (reportPnl) reportPnl.style.display = 'none';
-}
-window.feesBlockedChangeTerm = feesBlockedChangeTerm;
-/* END CUSTOM EDIT SECTION — Student Fees Block */
-
-/* ============================================================
-   START CUSTOM EDIT SECTION — Patch studentLogin to check fees
-   ============================================================ */
-(function patchStudentLoginForFees() {
+(function setupStudentLogin() {
   const _originalStudentLogin = window.studentLogin;
   window.studentLogin = function() {
     const cls       = document.getElementById('student-class').value;
@@ -7555,7 +6958,7 @@ window.feesBlockedChangeTerm = feesBlockedChangeTerm;
         return;
       }
 
-      // ── Login verified: identity confirmed, fees checked per-term in studentLoadTerm ──
+      // ── Login verified: identity confirmed. Term PIN is required in studentLoadTerm ──
       studentLoginData = { allStudents: all, admissionNo: admission, className: cls };
       document.getElementById('studentWelcomeName').textContent = `Welcome, ${stu['Name']}!`;
       document.getElementById('studentWelcomeSub').textContent  = `${cls} — Select a term to view your result`;
@@ -7571,18 +6974,11 @@ window.feesBlockedChangeTerm = feesBlockedChangeTerm;
     });
   };
 })();
-/* END CUSTOM EDIT SECTION — Patch studentLogin for fees */
+/* END CUSTOM EDIT SECTION — Student Login Handler */
 
 /* ============================================================
    START CUSTOM EDIT SECTION — Expose new functions to global scope
    ============================================================ */
-window.openTeachersSection         = openTeachersSection;
-window.openFeesSection             = openFeesSection;
-window.verifySecurityPin           = verifySecurityPin;
-window.closePinModal               = closePinModal;
-window.pinInput                    = pinInput;
-window.pinBackspace                = pinBackspace;
-window.pinClear                    = pinClear;
 window.loadTeachersBySection       = loadTeachersBySection;
 window.showTeacherProfile          = showTeacherProfile;
 window.showTeachersSectionPicker   = showTeachersSectionPicker;
@@ -7590,13 +6986,6 @@ window.showTeachersList            = showTeachersList;
 window.renderTeacherPaymentTable   = renderTeacherPaymentTable;
 window.expandSections              = expandSections;
 window.teacherBelongsToSection     = teacherBelongsToSection;
-window.openFeesSection             = openFeesSection;
-window.calculateSchoolFeesSummary  = calculateSchoolFeesSummary;
-window.openFeesClassView           = openFeesClassView;
-window.loadClassFeesData           = loadClassFeesData;
-window.showFeesSummaryView         = showFeesSummaryView;
-window.checkStudentFeesStatus      = checkStudentFeesStatus;
-window.blockStudentResultIfUnpaid  = blockStudentResultIfUnpaid;
 /* END CUSTOM EDIT SECTION */
 
 /* ============================================================
@@ -7761,7 +7150,7 @@ function renderAnalyticsCharts() {
 /* ============================================================
    START CUSTOM EDIT SECTION — PDF Letter Header Builder
    Purpose: Builds a white-background A4 letter-head PDF DOM element
-   used as the template for Teachers and Fees PDFs.
+   used as the template for Teachers PDFs.
    ============================================================ */
 
 /**
@@ -8247,11 +7636,22 @@ async function printPositionListDoc(className) {
 
 /* ============================================================
    START CUSTOM EDIT SECTION — Teacher Directory
-   Purpose: Full teacher list synced from a Google Sheet CSV
-   (columns: TeacherID, Name, Phone, Address, email, Primary 1,
-   Primary 2, Primary 3, Primary 4, Primary 5, Primary 6 — the
-   "Primary N" columns hold the subject(s) that teacher takes in
-   that class, comma-separated e.g. "English Language, Mathematics").
+   Purpose: Full teacher/staff list synced from a Google Sheet CSV
+   (columns: TeacherID, Name, Phone, Address, email, Password, Rank,
+   SignUrl, Primary 1, Primary 2, Primary 3, Primary 4, Primary 5,
+   Primary 6 — the "Primary N" columns hold the subject(s) that
+   teacher takes in that class, comma-separated e.g. "English
+   Language, Mathematics").
+   "Password" = login password for that row. "Rank" = "Admin" opens
+   the Admin Dashboard on login, anything else (e.g. "Teacher") opens
+   the Teacher Dashboard — this is the SAME sheet the Staff & Admin
+   Login screen authenticates against. "Rank" is ALSO how the report
+   card finds its Headmaster/Form Master: a row with Rank =
+   "Headmaster" or Rank = "Form Master" has its Name + SignUrl
+   pulled onto the report card's signature block automatically
+   (see findStaffByRank() / ensureTeacherDirectoryLoaded() below).
+   "SignUrl" = a direct image link (e.g. from PostImage) to that
+   staff member's signature.
    Letter-headed, downloadable and printable.
    ============================================================ */
 
@@ -8308,6 +7708,78 @@ function getTeacherClassesTaught(t) {
   return out;
 }
 
+/* START CUSTOM EDIT SECTION — Dynamic Form Master / Headmaster
+   Purpose: Maps each raw Teacher Directory row into the enriched
+   object used everywhere in the app. Pulled out into its own
+   function (instead of living inline inside loadTeacherDirectory)
+   so the report-card renderer can build/reuse the SAME data
+   — including the new "SignUrl" column — via a silent loader
+   that runs even if the admin never opened the Teacher Directory
+   tab. Accepted column names for the signature link (any ONE of
+   these headers works): SignUrl, Sign Url, Signature, SignatureUrl,
+   Sign Image, Sign. */
+function buildTeacherDirectoryReady(rawRecords) {
+  return rawRecords.map(t => ({
+    TeacherID: t['TeacherID'] || t['Teacher ID'] || t['StaffID'] || t['Staff ID'] || '—',
+    Name:      t['Name'] || '—',
+    Phone:     t['Phone'] || '—',
+    Address:   t['Address'] || '—',
+    Email:     t['email'] || t['Email'] || '—',
+    // Login credentials — now sourced from the sheet, not the code.
+    // "Password" column = this staff member's login password.
+    // "Rank" column = "Admin" for admin access, anything else (e.g.
+    // "Teacher", "Form Master", "Headmaster") opens the regular
+    // Teacher Dashboard. "Form Master" and "Headmaster" ranks are
+    // also used to auto-fill the report card's signature block.
+    Password:  t['Password'] || t['password'] || '',
+    Rank:      (t['Rank'] || t['rank'] || t['Role'] || t['role'] || 'Teacher').trim(),
+    // Direct image link for this staff member's signature, entered
+    // in a "SignUrl" column on the Teachers Master List sheet.
+    SignUrl:   (t['SignUrl'] || t['Sign Url'] || t['Signature'] || t['SignatureUrl'] || t['Sign Image'] || t['Sign'] || '').trim(),
+    classes:   getTeacherClassesTaught(t)
+  }));
+}
+
+/** Silently ensures the Teacher Directory (Teachers Master List) is
+    loaded into teacherDirectoryReady, WITHOUT touching any DOM/UI
+    (no loading spinner, no toast) — safe to call before rendering
+    report cards even if the admin never visited the Teacher
+    Directory tab this session. Loads once; call again with
+    force=true to refresh (e.g. after the sheet was edited). */
+async function ensureTeacherDirectoryLoaded(force) {
+  if (teacherDirLoadedOnce && !force) return;
+  if (!TEACHER_DIRECTORY_CSV_URL || TEACHER_DIRECTORY_CSV_URL.indexOf('PASTE_YOUR') === 0) return;
+  try {
+    const csv = await fetchCSV(TEACHER_DIRECTORY_CSV_URL);
+    teacherDirectoryData = parseTeacherDirectoryCSV(csv);
+    teacherDirectoryReady = buildTeacherDirectoryReady(teacherDirectoryData);
+    teacherDirLoadedOnce = true;
+  } catch (e) {
+    // Non-fatal: report cards will just fall back to SCHOOL_CONFIG's
+    // hardcoded headmaster/form master name+signature.
+    console.error('Could not auto-load Teacher Directory for signatures:', e);
+  }
+}
+
+/** Finds a staff member by their "Rank" column (e.g. "Headmaster",
+    "Form Master"), case/spacing-insensitive. When classType is
+    given (e.g. "Primary 4") and more than one staff member shares
+    that rank, it narrows to whoever is assigned to teach that class
+    (via their "Primary N" columns) — so each class can have its own
+    Form Master. Returns null if nobody in the sheet has that rank. */
+function findStaffByRank(rankKeyword, classType) {
+  const norm = s => (s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+  const target = norm(rankKeyword);
+  let matches = teacherDirectoryReady.filter(t => norm(t.Rank) === target);
+  if (classType && matches.length > 1) {
+    const classNorm = norm(classType);
+    const classMatches = matches.filter(t => t.classes.some(c => norm(c.className) === classNorm));
+    if (classMatches.length) matches = classMatches;
+  }
+  return matches[0] || null;
+}
+/* END CUSTOM EDIT SECTION — Dynamic Form Master / Headmaster */
+
 function setTeacherDirLoading(on) {
   const loader = $('teacherdir-loading');
   if (!loader) return;
@@ -8327,14 +7799,7 @@ async function loadTeacherDirectory(force) {
   try {
     const csv = await fetchCSV(TEACHER_DIRECTORY_CSV_URL);
     teacherDirectoryData = parseTeacherDirectoryCSV(csv);
-    teacherDirectoryReady = teacherDirectoryData.map(t => ({
-      TeacherID: t['TeacherID'] || t['Teacher ID'] || '—',
-      Name:      t['Name'] || '—',
-      Phone:     t['Phone'] || '—',
-      Address:   t['Address'] || '—',
-      Email:     t['email'] || t['Email'] || '—',
-      classes:   getTeacherClassesTaught(t)
-    }));
+    teacherDirectoryReady = buildTeacherDirectoryReady(teacherDirectoryData);
     teacherDirLoadedOnce = true;
     if (!teacherDirectoryReady.length) {
       showToast('⚠️ Teacher Directory sheet loaded but appears empty.', 'error');
@@ -8556,24 +8021,28 @@ function resolveClassArms(levelName) {
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 }
 
-async function teacherLogin() {
+/** Unified Staff & Admin Login.
+    Looks the entered Staff ID up in the Teachers Master List sheet
+    (teacherDirectoryReady, via loadTeacherDirectory()) and checks the
+    password against that row's "Password" column — nothing is
+    hardcoded in the code anymore. The row's "Rank" column then
+    decides where the person lands:
+      • Rank === "Admin"  → Admin Dashboard
+      • anything else     → Teacher Dashboard                        */
+async function staffLogin() {
   const idInput  = $('teacher-id-input');
   const pwInput  = $('teacher-password-input');
   const err      = $('teacher-login-error');
   const btn      = $('teacher-login-btn');
   const loader   = $('teacher-login-loading');
 
-  const teacherId = (idInput?.value || '').trim();
-  const password  = pwInput?.value || '';
+  const staffId  = (idInput?.value || '').trim();
+  const password = pwInput?.value || '';
 
   if (err) err.style.display = 'none';
 
-  if (!teacherId || !password) {
-    if (err) { err.textContent = '❌ Please enter your Teacher ID and password.'; err.style.display = 'block'; }
-    return;
-  }
-  if (password !== CREDENTIALS.teacher.password) {
-    if (err) { err.textContent = '❌ Incorrect password.'; err.style.display = 'block'; }
+  if (!staffId || !password) {
+    if (err) { err.textContent = '❌ Please enter your Staff ID and password.'; err.style.display = 'block'; }
     return;
   }
 
@@ -8581,26 +8050,48 @@ async function teacherLogin() {
   if (loader) loader.style.display = 'flex';
 
   try {
-    if (!teacherDirLoadedOnce) await loadTeacherDirectory();
+    // Always refresh so a password/rank change on the sheet takes effect
+    // on the next login attempt without needing a page reload.
+    await loadTeacherDirectory(true);
+
     const match = teacherDirectoryReady.find(t =>
-      t.TeacherID.trim().toLowerCase() === teacherId.toLowerCase()
+      t.TeacherID.trim().toLowerCase() === staffId.toLowerCase()
     );
     if (!match) {
-      if (err) { err.textContent = '❌ Teacher ID not found. Please check and try again.'; err.style.display = 'block'; }
+      if (err) { err.textContent = '❌ Staff ID not found. Please check and try again.'; err.style.display = 'block'; }
       return;
     }
-    currentTeacherLogin = match;
-    renderTeacherDashboard();
-    showScreen('screen-teacher-dash');
-    showToast(`✅ Welcome, ${match.Name}!`);
+    if (!match.Password) {
+      if (err) { err.textContent = '❌ No password set for this account. Contact the system admin.'; err.style.display = 'block'; }
+      return;
+    }
+    if (match.Password !== password) {
+      if (err) { err.textContent = '❌ Incorrect password.'; err.style.display = 'block'; }
+      return;
+    }
+
+    const isAdmin = (match.Rank || '').trim().toLowerCase() === 'admin';
+
+    if (isAdmin) {
+      initAdminDashboard();
+      showScreen('screen-admin-dash');
+      showToast(`✅ Welcome, ${match.Name}!`);
+    } else {
+      currentTeacherLogin = match;
+      renderTeacherDashboard();
+      showScreen('screen-teacher-dash');
+      showToast(`✅ Welcome, ${match.Name}!`);
+    }
   } catch (e) {
     console.error(e);
-    if (err) { err.textContent = '❌ Could not verify Teacher ID. Check your connection.'; err.style.display = 'block'; }
+    if (err) { err.textContent = '❌ Could not verify your login. Check your connection.'; err.style.display = 'block'; }
   } finally {
     if (btn) btn.classList.remove('btn-login-loading');
     if (loader) loader.style.display = 'none';
   }
 }
+// Back-compat alias, in case anything else in the file still calls teacherLogin()
+const teacherLogin = staffLogin;
 
 function teacherLogout() {
   currentTeacherLogin  = null;
@@ -8939,167 +8430,6 @@ async function downloadTeachersPDF() {
 /* END CUSTOM EDIT SECTION — Download Teachers PDF */
 
 /* ============================================================
-   START CUSTOM EDIT SECTION — Download Fees Summary PDF
-   Purpose: Export school-wide fees summary as a letter-headed PDF.
-   ============================================================ */
-async function downloadFeesSummaryPDF() {
-  const tbody = document.getElementById('fees-summary-tbody');
-  if (!tbody || tbody.rows.length === 0 || (tbody.rows[0] && tbody.rows[0].cells[0] && tbody.rows[0].cells[0].colSpan === 4)) {
-    showToast('❌ Please load class data first — click a class card to populate fees.', 'error');
-    return;
-  }
-
-  showToast('⏳ Generating Fees Summary PDF…');
-
-  // Grab rows from the summary table
-  const rows = Array.from(tbody.rows).map((row, i) => {
-    const cells = Array.from(row.cells).map(td => td.textContent.trim());
-    return `<tr style="background:${i % 2 === 0 ? '#fff' : '#FBF6EC'};">
-      ${cells.map(c => `<td style="padding:8px 10px;border:1px solid #F1E2C9;font-size:12px;">${c}</td>`).join('')}
-    </tr>`;
-  }).join('');
-
-  const grandTotal = document.getElementById('fees-grand-total')
-    ? document.getElementById('fees-grand-total').textContent : '—';
-
-  const tableHtml = `
-    <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:10px;">
-      <thead>
-        <tr style="background:#5C3317;color:#fff;">
-          <th style="padding:9px 10px;border:1px solid #3D2314;text-align:left;font-size:11px;text-transform:uppercase;">Section</th>
-          <th style="padding:9px 10px;border:1px solid #3D2314;text-align:left;font-size:11px;text-transform:uppercase;">Fee / Student</th>
-          <th style="padding:9px 10px;border:1px solid #3D2314;text-align:left;font-size:11px;text-transform:uppercase;">Students</th>
-          <th style="padding:9px 10px;border:1px solid #3D2314;text-align:left;font-size:11px;text-transform:uppercase;">Expected Total</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-      <tfoot>
-        <tr style="background:#FBF6EC;">
-          <td colspan="3" style="padding:9px 10px;border:1px solid #F1E2C9;font-weight:900;color:#5C3317;">💰 Grand Total Expected</td>
-          <td style="padding:9px 10px;border:1px solid #F1E2C9;font-weight:900;color:#5C3317;font-size:14px;">${grandTotal}</td>
-        </tr>
-      </tfoot>
-    </table>`;
-
-  const html = buildLetterPdfHtml(
-    'School Fees Summary Report',
-    `Academic Session: ${SCHOOL_CONFIG.session} | All Sections`,
-    tableHtml
-  );
-
-  try {
-    const el = mountLetterTemplate(html);
-    await html2pdf().set(letterPdfOptions('Pariya_Primary_Fees_Summary.pdf')).from(el).save();
-    unmountLetterTemplate(el);
-    showToast('✅ Fees Summary PDF downloaded!');
-  } catch(e) {
-    console.error(e);
-    showToast('❌ PDF export failed.', 'error');
-  }
-}
-/* END CUSTOM EDIT SECTION — Download Fees Summary PDF */
-
-/* ============================================================
-   START CUSTOM EDIT SECTION — Download Fees Class Detail PDF
-   Purpose: Export a specific class + term fees breakdown as
-   a letter-headed PDF with student payment rows.
-   ============================================================ */
-async function downloadFeesClassPDF() {
-  const tbody = document.getElementById('fees-student-tbody');
-  if (!tbody || tbody.rows.length === 0) {
-    showToast('❌ Select a term first to load the class fees data.', 'error');
-    return;
-  }
-  const firstCell = tbody.rows[0].cells[0];
-  if (firstCell && firstCell.colSpan > 1) {
-    showToast('❌ Select a term first to load student fees data.', 'error');
-    return;
-  }
-
-  const heading   = document.getElementById('fees-class-heading')?.textContent || 'Class Fees';
-  const className = currentFeesClass || 'Class';
-
-  // Stats
-  const total       = document.getElementById('fees-stat-total')?.textContent || '—';
-  const paid        = document.getElementById('fees-stat-paid')?.textContent || '—';
-  const outstanding = document.getElementById('fees-stat-outstanding')?.textContent || '—';
-  const collected   = document.getElementById('fees-stat-collected')?.textContent || '—';
-  const owed        = document.getElementById('fees-stat-owed')?.textContent || '—';
-  const rate        = document.getElementById('fees-stat-rate')?.textContent || '—';
-
-  showToast('⏳ Generating Fees Class PDF…');
-
-  // Summary stats block
-  const statsBlock = `
-    <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:14px;">
-      <tr>
-        <td style="padding:7px 10px;border:1px solid #F1E2C9;font-weight:800;color:#6B5645;background:#FBF6EC;">Total Students</td>
-        <td style="padding:7px 10px;border:1px solid #F1E2C9;font-weight:900;">${total}</td>
-        <td style="padding:7px 10px;border:1px solid #F1E2C9;font-weight:800;color:#6B5645;background:#FBF6EC;">Paid</td>
-        <td style="padding:7px 10px;border:1px solid #F1E2C9;font-weight:900;color:#5C3317;">${paid}</td>
-        <td style="padding:7px 10px;border:1px solid #F1E2C9;font-weight:800;color:#6B5645;background:#FBF6EC;">Outstanding</td>
-        <td style="padding:7px 10px;border:1px solid #F1E2C9;font-weight:900;color:#9C3316;">${outstanding}</td>
-      </tr>
-      <tr>
-        <td style="padding:7px 10px;border:1px solid #F1E2C9;font-weight:800;color:#6B5645;background:#FBF6EC;">Collected</td>
-        <td style="padding:7px 10px;border:1px solid #F1E2C9;font-weight:900;color:#5C3317;">${collected}</td>
-        <td style="padding:7px 10px;border:1px solid #F1E2C9;font-weight:800;color:#6B5645;background:#FBF6EC;">Owed</td>
-        <td style="padding:7px 10px;border:1px solid #F1E2C9;font-weight:900;color:#9C3316;">${owed}</td>
-        <td style="padding:7px 10px;border:1px solid #F1E2C9;font-weight:800;color:#6B5645;background:#FBF6EC;">Collection Rate</td>
-        <td style="padding:7px 10px;border:1px solid #F1E2C9;font-weight:900;">${rate}</td>
-      </tr>
-    </table>`;
-
-  // Student rows
-  const studentRows = Array.from(tbody.rows).map((row, i) => {
-    const cells = Array.from(row.cells);
-    // strip any html badge text to plain text
-    const rowData = cells.map(td => td.textContent.trim().replace(/[✔✘]/g,'').trim());
-    const isUnpaid = (rowData[5] || '').toLowerCase().includes('outstanding');
-    return `<tr style="background:${i % 2 === 0 ? '#fff' : '#FBF6EC'};">
-      <td style="padding:7px 8px;border:1px solid #F1E2C9;text-align:center;">${rowData[0]}</td>
-      <td style="padding:7px 8px;border:1px solid #F1E2C9;font-weight:800;">${rowData[1]}</td>
-      <td style="padding:7px 8px;border:1px solid #F1E2C9;">${rowData[2]}</td>
-      <td style="padding:7px 8px;border:1px solid #F1E2C9;">${rowData[3]}</td>
-      <td style="padding:7px 8px;border:1px solid #F1E2C9;font-weight:800;color:#5C3317;">${rowData[4]}</td>
-      <td style="padding:7px 8px;border:1px solid #F1E2C9;font-weight:800;color:${isUnpaid ? '#9C3316' : '#5C3317'};">${rowData[5]}</td>
-    </tr>`;
-  }).join('');
-
-  const tableHtml = statsBlock + `
-    <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:10px;">
-      <thead>
-        <tr style="background:#5C3317;color:#fff;">
-          <th style="padding:8px;border:1px solid #3D2314;text-align:center;">#</th>
-          <th style="padding:8px;border:1px solid #3D2314;text-align:left;">Student Name</th>
-          <th style="padding:8px;border:1px solid #3D2314;text-align:left;">Admission No</th>
-          <th style="padding:8px;border:1px solid #3D2314;text-align:left;">Expected</th>
-          <th style="padding:8px;border:1px solid #3D2314;text-align:left;">Amount Paid</th>
-          <th style="padding:8px;border:1px solid #3D2314;text-align:left;">Status</th>
-        </tr>
-      </thead>
-      <tbody>${studentRows}</tbody>
-    </table>`;
-
-  const html = buildLetterPdfHtml(
-    `${className} — School Fees Report`,
-    `${heading} | Session: ${SCHOOL_CONFIG.session}`,
-    tableHtml
-  );
-
-  try {
-    const el = mountLetterTemplate(html);
-    await html2pdf().set(letterPdfOptions(`Pariya_Primary_Fees_${className.replace(/\s/g,'_')}.pdf`)).from(el).save();
-    unmountLetterTemplate(el);
-    showToast('✅ Class Fees PDF downloaded!');
-  } catch(e) {
-    console.error(e);
-    showToast('❌ PDF export failed.', 'error');
-  }
-}
-/* END CUSTOM EDIT SECTION — Download Fees Class Detail PDF */
-
-/* ============================================================
    START CUSTOM EDIT SECTION — Patch loadAllAnalytics to add charts
    Purpose: After loading analytics data, render charts automatically.
    Wraps original function without removing any logic.
@@ -9162,24 +8492,19 @@ function toggleSidebar() {
 window.toggleSidebar = toggleSidebar;
 
 /* ============================================================
-   SMART UNIFIED LOGIN
+   STUDENT LOGIN (screen-portal)
+   Purpose: This is now a pure student sign-in form — Admin and
+   Teacher/Staff login has moved to the separate merged Staff &
+   Admin Login screen (staffLogin()), so there's no more username
+   sniffing to detect an admin account here.
    ============================================================ */
 function onSmartUsernameInput(val) {
   const wrap = document.getElementById('smart-class-wrap');
-  const badge = document.getElementById('login-badge-label');
   if (!wrap) return;
-  const trimmed = val.trim().toLowerCase();
-  // If it looks like an admission number (not exactly admin username), reveal class selector
-  const isAdmin = trimmed === CREDENTIALS.admin.username.toLowerCase();
-  if (!isAdmin && trimmed.length > 0) {
+  if (val.trim().length > 0) {
     wrap.classList.add('revealed');
-    if (badge) badge.textContent = '🎓 Student Login';
-  } else if (isAdmin) {
-    wrap.classList.remove('revealed');
-    if (badge) badge.textContent = '🔐 Admin Login';
   } else {
     wrap.classList.remove('revealed');
-    if (badge) badge.textContent = '🔐 Smart Login';
   }
 }
 
@@ -9205,7 +8530,7 @@ function smartLogin() {
   if (err) { err.textContent = ''; err.style.display = 'none'; }
 
   if (!username || !password) {
-    _smartLoginError('❌ Please enter username and password.');
+    _smartLoginError('❌ Please enter your admission number and password.');
     return;
   }
 
@@ -9214,18 +8539,6 @@ function smartLogin() {
     localStorage.setItem('pa_remember_user', username);
   } else {
     localStorage.removeItem('pa_remember_user');
-  }
-
-  // Admin check
-  if (username === CREDENTIALS.admin.username && password === CREDENTIALS.admin.password) {
-    _smartLoginLoading(true, btn, loader);
-    setTimeout(() => {
-      _smartLoginLoading(false, btn, loader);
-      initAdminDashboard();
-      showScreen('screen-admin-dash');
-      showToast('✅ Welcome, Admin!');
-    }, 500);
-    return;
   }
 
   // Student check — need class
@@ -9269,7 +8582,7 @@ function smartLogin() {
       return;
     }
 
-    // ── Identity confirmed; fees are checked per-term when student picks a term ──
+    // ── Identity confirmed; term PIN is required when student picks a term ──
     studentLoginData = { allStudents: all, admissionNo: username, className: classVal };
     document.getElementById('studentWelcomeName').textContent = `Welcome, ${stu['Name']}!`;
     document.getElementById('studentWelcomeSub').textContent  = `${classVal} — Select a term to view your result`;
@@ -9354,45 +8667,12 @@ window.saveTeacherPaymentStatus = saveTeacherPaymentStatus;
 window.clearTeacherPaymentData  = clearTeacherPaymentData;
 
 /* ============================================================
-   ADMIN FEE OVERRIDE — Mark students as paid locally
-   ============================================================ */
-function getFeeOverrideKey(className, term, admissionNo) {
-  return `fee_override_${className}_${term}_${admissionNo}`.replace(/\s/g,'_');
-}
-
-function adminMarkStudentPaid(className, term, admissionNo, currentlyPaid, btnEl) {
-  const key   = getFeeOverrideKey(className, term, admissionNo);
-  const newVal = !currentlyPaid;
-  localStorage.setItem(key, newVal ? '1' : '0');
-  if (btnEl) {
-    btnEl.textContent = newVal ? '✔ Paid' : '✘ Unpaid';
-    btnEl.classList.toggle('marked', !newVal);
-  }
-  showToast(newVal ? '✅ Marked as Paid' : '⚠ Marked as Unpaid');
-}
-
-function getFeeOverride(className, term, admissionNo) {
-  const key = getFeeOverrideKey(className, term, admissionNo);
-  const v   = localStorage.getItem(key);
-  return v === null ? null : v === '1';
-}
-
-function clearFeeOverrideData() {
-  Object.keys(localStorage).filter(k => k.startsWith('fee_override_')).forEach(k => localStorage.removeItem(k));
-  showToast('✅ Fee override data cleared.');
-}
-
-window.adminMarkStudentPaid = adminMarkStudentPaid;
-window.getFeeOverride       = getFeeOverride;
-window.clearFeeOverrideData = clearFeeOverrideData;
-
-/* ============================================================
    SETTINGS HELPERS
    ============================================================ */
 function resetAllLocalData() {
-  if (!confirm('This will reset all local data (theme, payments, fee overrides). Continue?')) return;
+  if (!confirm('This will reset all local data (theme, payments). Continue?')) return;
   const keysToRemove = Object.keys(localStorage).filter(k =>
-    k.startsWith('teacher_pay_') || k.startsWith('fee_override_') || k === 'portalTheme' || k === 'pa_remember_user'
+    k.startsWith('teacher_pay_') || k === 'portalTheme' || k === 'pa_remember_user'
   );
   keysToRemove.forEach(k => localStorage.removeItem(k));
   applyTheme('dark');
@@ -9436,8 +8716,6 @@ window.addEventListener('load', () => {
 
 /* Expose new functions */
 window.downloadTeachersPDF      = typeof downloadTeachersPDF !== 'undefined' ? downloadTeachersPDF : null;
-window.downloadFeesSummaryPDF   = typeof downloadFeesSummaryPDF !== 'undefined' ? downloadFeesSummaryPDF : null;
-window.downloadFeesClassPDF     = typeof downloadFeesClassPDF !== 'undefined' ? downloadFeesClassPDF : null;
 window.renderAnalyticsCharts    = typeof renderAnalyticsCharts !== 'undefined' ? renderAnalyticsCharts : null;
 window.downloadAnalyticsWord    = downloadAnalyticsWord;
 window.computeTermAvg           = computeTermAvg;
@@ -9646,13 +8924,17 @@ function curvedStampStars(count, radius, fontSize, color) {
    with curved school-name text, red scalloped seal, Head Teacher's signature.
    The student's own "Sign:" field is always left blank for them to sign. */
 function buildTestimonialCertHTML(opts) {
-  // opts: { _id, name, classArm, admissionNo, fromYear, toYear, todayFull, dateShort }
+  // opts: { _id, name, classArm, admissionNo, fromYear, toYear, todayFull, dateShort,
+  //         schoolName (optional override), schoolAddress (optional override),
+  //         headteacherSig (optional override) }
   const name       = opts.name || 'Unnamed Student';
   const firstName  = name.trim().split(/\s+/)[0] || name;
   const fromYear   = opts.fromYear;
   const toYear     = opts.toYear;
   const dateShort  = opts.dateShort;
-  const schoolName = SCHOOL_CONFIG.name || 'THE SCHOOL';
+  const schoolName    = opts.schoolName    || SCHOOL_CONFIG.name    || 'THE SCHOOL';
+  const schoolAddress = opts.schoolAddress || SCHOOL_CONFIG.address || '';
+  const headteacherSig = opts.headteacherSig || SCHOOL_CONFIG.headmasterSig || '';
   return `
   <div class="cert-portrait-wrapper">
   <div class="cert-testimonial" id="cert-tst-${opts._id != null ? opts._id : 'x'}">
@@ -9675,40 +8957,34 @@ function buildTestimonialCertHTML(opts) {
       </div>
       <div class="cert-testi-header-row">
         <div class="cert-testi-school-name">${escapeHtml(schoolName)}</div>
-        ${SCHOOL_CONFIG.address ? `<div class="cert-testi-school-sub">${escapeHtml(SCHOOL_CONFIG.address)}</div>` : ''}
+        ${schoolAddress ? `<div class="cert-testi-school-sub">${escapeHtml(schoolAddress)}</div>` : ''}
       </div>
       <div class="cert-testi-title">Testimonial</div>
       <div class="cert-testi-title-underline"></div>
       <div class="cert-testi-whom">To whom it may Concern</div>
       <div class="cert-testi-certify">This is to Certify that:</div>
       <div class="cert-testi-name">${escapeHtml(name.toUpperCase())}</div>
-      ${opts.classArm ? `<div class="cert-testi-classarm">${escapeHtml(opts.classArm)}${opts.admissionNo ? ' &nbsp;|&nbsp; Admission No: ' + escapeHtml(opts.admissionNo) : ''}</div>` : ''}
+      ${opts.admissionNo ? `<div class="cert-testi-classarm">Admission No: ${escapeHtml(opts.admissionNo)}</div>` : ''}
       <div class="cert-testi-line">Has Completed His/Her Primary School Education</div>
       <div class="cert-testi-line">From the above mentioned School</div>
       <div class="cert-testi-yearrow">From the year: <b>${fromYear}</b> &nbsp;&nbsp; To: <b>${toYear}</b></div>
-      <div class="cert-testi-conduct">And His/Her conduct was: <b>GOOD</b> during His/Her stay<br>in the School.</div>
+      <div class="cert-testi-conduct">And His/Her conduct was: <b>GOOD</b> during His/Her stay</div>
+      <div class="cert-testi-conduct-line2">in the School.</div>
       <div class="cert-testi-namesign-row">
         <div>Name:<span class="field-line">${escapeHtml(firstName.toUpperCase())}</span></div>
         <div>Sign:<span class="field-line">&nbsp;</span></div>
       </div>
       <div class="cert-testi-seals-row">
         <div class="cert-testi-stamp-block">
-          <div class="cert-testi-stamp-circle">
-            <div class="cert-testi-stamp-circle-dotted"></div>
-            ${curvedStampText(schoolName.toUpperCase())}
-            ${curvedStampStars()}
-            <div style="display:flex;flex-direction:column;align-items:center;">
-              <img class="cert-testi-stamp-sig" src="${SCHOOL_CONFIG.headmasterSig}" alt="" onerror="this.style.display='none'">
-              <div class="cert-testi-stamp-date">DATE: ${dateShort}</div>
-            </div>
-          </div>
+          <div class="cert-testi-stamp-blank"></div>
+          <div class="cert-testi-sig-line"></div>
           <div class="cert-testi-stamp-label">STAMP</div>
         </div>
         <div style="text-align:center;">
           ${generateSealSVG()}
         </div>
         <div class="cert-testi-sig-block">
-          <img class="cert-testi-sig-img" src="${SCHOOL_CONFIG.headmasterSig}" alt="Head Teacher Sig" onerror="this.style.display='none'">
+          <img class="cert-testi-sig-img" src="${headteacherSig}" alt="Head Teacher Sig" onerror="this.style.display='none'">
           <div class="cert-testi-sig-line"></div>
           <div class="cert-testi-sig-title">HEADTEACHERS SIGN</div>
         </div>
@@ -9774,6 +9050,140 @@ async function generateTestimonialCertificates() {
       </div>`;
     previewEl.appendChild(container);
   });
+}
+
+/* ============================================================
+   MANUAL TESTIMONIAL GENERATOR (Upload CSV)
+   Purpose: Let a school with no Google Sheets set up still
+   generate testimonials — by uploading a plain student-list CSV,
+   typing the school name/address directly, and uploading the
+   Head Teacher's signature image as a file. None of this touches
+   SCHOOL_CONFIG; it only applies to the certificates built here.
+   ============================================================ */
+
+/* Read a File object as plain text (used for the CSV upload). */
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(file);
+  });
+}
+
+/* Read a File object as a base64 data URL (used for the signature image
+   upload, so it works instantly with no external hosting required). */
+function readFileAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+/* Parse a plain student-list CSV (NOT the full report-card CSV format —
+   this only needs a Name column, plus an optional Admission No column).
+   Handles quoted commas, and recognises several common header spellings
+   so it works with CSVs exported from different school systems. */
+function parseStudentListCSV(csv) {
+  const lines = csv.split(/\r?\n/).filter(l => l.trim() !== '');
+  if (lines.length < 2) return [];
+
+  const rawHeaders = parseCSVLineQuoted(lines[0]);
+  const norm = s => (s || '').replace(/[^a-z0-9]/gi, '').toLowerCase();
+
+  const nameVariants = ['name', 'studentname', 'fullname', 'pupilname', 'learnername'];
+  const admVariants  = ['admissionno', 'admissionnumber', 'admno', 'admnumber',
+                         'regno', 'registrationno', 'registrationnumber'];
+
+  let nameHeader = null, admHeader = null;
+  rawHeaders.forEach(h => {
+    const n = norm(h);
+    if (!nameHeader && nameVariants.includes(n)) nameHeader = h;
+    if (!admHeader  && admVariants.includes(n))  admHeader  = h;
+  });
+  // Fallback: no exact match — use the first header that merely contains
+  // "name" / "adm" / "reg", so slightly different spellings still work.
+  if (!nameHeader) nameHeader = rawHeaders.find(h => norm(h).includes('name')) || rawHeaders[0];
+  if (!admHeader)  admHeader  = rawHeaders.find(h => norm(h).includes('adm') || norm(h).includes('reg'));
+
+  const records = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols = parseCSVLineQuoted(lines[i]);
+    const obj = {};
+    rawHeaders.forEach((h, idx) => { obj[h] = (cols[idx] || '').trim(); });
+    const name = nameHeader ? obj[nameHeader] : '';
+    if (!name) continue;
+    records.push({ name, admissionNo: admHeader ? (obj[admHeader] || '') : '' });
+  }
+  return records;
+}
+
+/* Generate testimonial certificates from a manually uploaded CSV, with a
+   manually uploaded Head Teacher signature and manually typed school
+   name/address — for schools that don't have Google Sheets connected. */
+async function generateTestimonialsFromCSV() {
+  const previewEl     = $('testimonial-certs-preview');
+  const csvFileInput  = $('manual-testi-csv-file');
+  const sigFileInput  = $('manual-testi-sig-file');
+  const schoolNameEl  = $('manual-testi-school-name');
+  const schoolAddrEl  = $('manual-testi-school-address');
+  if (!previewEl) return;
+
+  const csvFile = csvFileInput && csvFileInput.files[0];
+  if (!csvFile) {
+    showToast('⚠️ Please choose a student list CSV file first.', 'error');
+    return;
+  }
+
+  previewEl.innerHTML = '<div style="font-size:13px;color:var(--dash-muted);font-weight:700;padding:12px;">⏳ Reading CSV file…</div>';
+
+  try {
+    const csvText  = await readFileAsText(csvFile);
+    const students = parseStudentListCSV(csvText);
+
+    if (!students.length) {
+      previewEl.innerHTML = '<div style="font-size:13px;color:#B3401F;font-weight:700;padding:12px;">⚠️ No usable student rows found. Make sure the CSV has at least a "Name" column with data.</div>';
+      return;
+    }
+
+    // Optional signature image upload — falls back to SCHOOL_CONFIG.headmasterSig if not provided.
+    const sigFile = sigFileInput && sigFileInput.files[0];
+    const headteacherSig = sigFile ? await readFileAsDataURL(sigFile) : '';
+
+    // Manually typed school name/address — falls back to SCHOOL_CONFIG if left blank.
+    const schoolName    = (schoolNameEl && schoolNameEl.value.trim()) || '';
+    const schoolAddress  = (schoolAddrEl && schoolAddrEl.value.trim()) || '';
+
+    const { fromYear, toYear, todayFull, dateShort } = computeTestimonialDates();
+    previewEl.innerHTML = `<div style="font-size:12px;font-weight:800;color:var(--dash-muted);margin-bottom:14px;text-transform:uppercase;letter-spacing:.05em;">🖊️ ${students.length} Student(s) Loaded From CSV</div>`;
+
+    students.forEach((stu, i) => {
+      const container = document.createElement('div');
+      container.style.marginBottom = '30px';
+      container.innerHTML =
+        buildTestimonialCertHTML({
+          _id: `m-${i}`,
+          name: stu.name,
+          admissionNo: stu.admissionNo,
+          schoolName, schoolAddress, headteacherSig,
+          fromYear, toYear, todayFull, dateShort
+        }) +
+        `<div style="margin-top:8px;text-align:center;">
+          <button class="btn-export-pdf" style="margin-bottom:0;padding:8px 16px;font-size:12px;background:linear-gradient(135deg,#6B2E3B,#4A2530);"
+            onclick="downloadCertPDF(document.getElementById('cert-tst-m-${i}'), 'Testimonial_${stu.name.replace(/\\s/g,'_')}.pdf', 'portrait')">
+            📄 Download Testimonial
+          </button>
+        </div>`;
+      previewEl.appendChild(container);
+    });
+
+    showToast(`✅ ${students.length} testimonial(s) generated from CSV!`);
+  } catch (e) {
+    console.error('generateTestimonialsFromCSV failed:', e);
+    previewEl.innerHTML = '<div style="font-size:13px;color:#B3401F;font-weight:700;padding:12px;">❌ Could not read the CSV file. See console for details.</div>';
+  }
 }
 
 /* Wait for every <img> inside a node to finish loading (or fail) before we
@@ -9990,15 +9400,16 @@ window.buildTestimonialCertHTML        = buildTestimonialCertHTML;
 window.computeTestimonialDates         = computeTestimonialDates;
 window.downloadAllTestimonials         = downloadAllTestimonials;
 window.printAllTestimonials            = printAllTestimonials;
+window.generateTestimonialsFromCSV     = generateTestimonialsFromCSV;
 
 /* ============================================================
    TERM PIN LOCK SYSTEM — Student Dashboard
-   Pins: First Term = 4545 | Second Term = 8787 | Third Term = 9191
+   Pins: First Term = 2024 | Second Term = 2025 | Third Term = 2026
    ============================================================ */
 const TERM_PINS = {
-  'First Term':  '4545',
-  'Second Term': '8787',
-  'Third Term':  '9191',
+  'First Term':  '2024',
+  'Second Term': '2025',
+  'Third Term':  '2026',
 };
 
 let _termPinTarget = '';
